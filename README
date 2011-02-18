@@ -1,0 +1,49 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *                              minstack                                       *
+ * Copyright (C) 2010,2011  Aurelien BOUIN (a_bouin@yahoo.fr)                  *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *  This program is free software; you can redistribute it and/or              *
+ *  modify it under the terms of the GNU General Public License                *
+ *  as published by the Free Software Foundation; either version 3             *
+ *  of the License, or (at your option) any later version.                     *
+ *                                                                             *
+ *  This program is distributed in the hope that it will be useful,            *
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ *  GNU General Public License for more details.                               *
+ *                                                                             *
+ *  You should have received a copy of the GNU General Public License          *
+ *  along with this program; if not, write to the Free Software                *
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.*
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+Project		: minstack - A minimal stack for UDP and/or TCP transactions
+Email		: a_bouin@yahoo.fr
+License		: GPLv3
+Home Page	: ...
+
+minstack is a GPL v3 library that help the implentation of UDP/TCP trasactions.
+It aims to implement a minimal stack with a very simple high layer API.
+
+Features :
+----------
+
+minstack has support for :
+ - TCP client
+ - TCP server
+
+Installation procedure:
+-----------------------
+
+The program is known to run on linux.
+
+   $> ./autogen.sh
+   $> ./configure
+   $> make
+   $> su -c 'make install'
+
+Contact information:
+--------------------
+
+For more information on minstack, any contributions, or any remarks,
+you can contact me at <a_bouin@yahoo.fr>.
