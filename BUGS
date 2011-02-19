@@ -1,0 +1,2 @@
+manage minstack_tcp_boot_server return value to free the space
+manage uninit depending of the state

@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: minstack
+Description: A minimal stack for UDP/TCP transaction
+Version: @VERSION@
+Libs: -L${libdir} -lminstack
+Cflags:  -I${includedir}

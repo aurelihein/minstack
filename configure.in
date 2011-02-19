@@ -1,0 +1,75 @@
+dnl Process this file with autoconf to produce a configure script.
+AC_REVISION($Revision: 1.82 $)dnl
+AC_PREREQ(2.50)
+AC_INIT(README)
+
+PACKAGE=minstack
+
+AC_MSG_NOTICE([minstack         A minimal stack for UDP and/or TCP transaction.])
+AC_MSG_NOTICE([Copyright (C) 2010,2011 Aurelien BOUIN - <a_bouin@yahoo.fr>])
+
+dnl *********************************************************************
+dnl Source packaging numbers
+MINSTACK_MAJOR_VERSION=0
+MINSTACK_MINOR_VERSION=4
+MINSTACK_MICRO_VERSION=1
+MINSTACK_VERSION=$MINSTACK_MAJOR_VERSION.$MINSTACK_MINOR_VERSION.$MINSTACK_MICRO_VERSION
+
+VERSION=$MINSTACK_VERSION
+
+AC_SUBST(VERSION)
+AC_SUBST(PACKAGE)
+
+dnl AC_PREFIX_DEFAULT('$(HOME)/local')
+AC_CANONICAL_HOST
+AM_INIT_AUTOMAKE($PACKAGE, $VERSION)
+
+AC_ARG_PROGRAM
+AC_PROG_CC
+AC_PROG_CPP
+AC_PROG_INSTALL
+AM_PROG_CC_C_O
+
+AC_LIBTOOL_WIN32_DLL
+LT_AC_PROG_SED
+AC_PROG_LIBTOOL
+
+
+# Checks for header files.
+AC_CHECK_HEADERS([arpa/inet.h netdb.h netinet/in.h string.h sys/socket.h unistd.h])
+
+# Checks for library functions.
+AC_CHECK_FUNCS([gethostbyname inet_ntoa memset select socket])
+
+CONFIG_CFLAGS=
+
+dnl declare --enable-* args and collect ac_help strings
+
+AC_ARG_ENABLE(gdb,
+[  --enable-gdb          turn on gdb debugging.],
+enable_gdb=$enableval,enable_gdb="yes")
+
+if test "x$enable_gdb" = "xyes"; then
+  CONFIG_CFLAGS="$CONFIG_CFLAGS -g"
+fi
+
+AC_ARG_ENABLE(debug,
+[  --enable-debug          turn on debugging.],
+enable_debug=$enableval,enable_debug="yes")
+
+if test "x$enable_debug" = "xyes"; then
+  CONFIG_CFLAGS="$CONFIG_CFLAGS -g -DDEBUG_ENABLED"
+fi
+
+AC_SUBST(CONFIG_CFLAGS)
+
+#VERSION_INFO="0:4:1"
+#AC_SUBST(VERSION_INFO)
+
+AC_OUTPUT([
+  Makefile
+  src/Makefile
+  test/Makefile
+  include/Makefile
+  minstack.pc
+])
