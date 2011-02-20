@@ -40,7 +40,7 @@ int stop_thread_server_socket = 0;
 
 int minstack_tcp_delete_cid(sockets *mt, int cid);
 
-char *minstack_default_read(int cid, unsigned int *buffer_size_returned) {
+char *minstack_tcp_default_read(int cid, unsigned int *buffer_size_returned) {
     int retval, finished = 0;
     char read_buffer[DEFAULT_READ_BUFFER_SIZE] = { 0 };
     unsigned int buffer_size = DEFAULT_READ_BUFFER_SIZE;
@@ -579,7 +579,7 @@ minstack_tcp * minstack_tcp_init(const char *nickname) {
 
     mt->status = IDLE;
     mt->pthread_reading_thread_stop = 1;
-    printmessage("%s minstack has been initialized\n",mt->name);
+    printmessage("%s minstack TCP has been initialized\n",mt->name);
     return mt;
 }
 
@@ -594,9 +594,9 @@ void minstack_tcp_uninit(minstack_tcp *mt) {
     }
     if (mt->status == STARTED) {
         minstack_tcp_stop(mt);
-        printdebug("%s minstack has been stopped before uninit\n",mt->name);
+        printdebug("%s minstack has TCP been stopped before uninit\n",mt->name);
     }
-    printmessage("%s minstack has been uninitialized\n",mt->name);
+    printmessage("%s minstack TCP has been uninitialized\n",mt->name);
     free(mt);
 }
 
@@ -621,7 +621,7 @@ int minstack_tcp_init_server(minstack_tcp *mt, int port,
     mt->new_connection_callback = minstack_default_new_connection_callback;
     mt->connection_closed_callback
             = minstack_default_connection_closed_server_callback;
-    mt->read_socket = minstack_default_read;
+    mt->read_socket = minstack_tcp_default_read;
     mt->external_read_socket = NULL;
     pthread_mutex_unlock(&mt->mutex);
     return 0;
@@ -643,7 +643,7 @@ int minstack_tcp_init_client(minstack_tcp *mt, int port, const char *address) {
     mt->receive_loop_usleep = 100 * 1000;
     mt->new_connection_callback = NULL;
     mt->connection_closed_callback = NULL;
-    mt->read_socket = minstack_default_read;
+    mt->read_socket = minstack_tcp_default_read;
     mt->external_read_socket = NULL;
     pthread_mutex_init(&mt->mutex, NULL);
     return 0;

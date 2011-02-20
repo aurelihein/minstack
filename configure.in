@@ -5,14 +5,14 @@ AC_INIT(README)
 
 PACKAGE=minstack
 
-AC_MSG_NOTICE([minstack         A minimal stack for UDP and/or TCP transaction.])
+AC_MSG_NOTICE([minstack    A minimal stack for UDP and/or TCP transaction.])
 AC_MSG_NOTICE([Copyright (C) 2010,2011 Aurelien BOUIN - <a_bouin@yahoo.fr>])
 
 dnl *********************************************************************
 dnl Source packaging numbers
 MINSTACK_MAJOR_VERSION=0
-MINSTACK_MINOR_VERSION=4
-MINSTACK_MICRO_VERSION=1
+MINSTACK_MINOR_VERSION=5
+MINSTACK_MICRO_VERSION=0
 MINSTACK_VERSION=$MINSTACK_MAJOR_VERSION.$MINSTACK_MINOR_VERSION.$MINSTACK_MICRO_VERSION
 
 VERSION=$MINSTACK_VERSION
@@ -61,9 +61,25 @@ if test "x$enable_debug" = "xyes"; then
   CONFIG_CFLAGS="$CONFIG_CFLAGS -g -DDEBUG_ENABLED"
 fi
 
+dnl conditionnal build of test applications
+AC_ARG_ENABLE(test,
+      [  --enable-test=[yes/no]    Turn on or off compilation of Test applications [default=no]],
+      [case "${enableval}" in
+        yes) test=true ;;
+        no)  test=false ;;
+        *) AC_MSG_ERROR(bad value ${enableval} for --enable-test) ;;
+      esac],[test=false])
+
+if test "$test" = "false" ; then
+echo "Test applications compilation are disabled."
+fi
+
+dnl build console if required
+AM_CONDITIONAL(BUILD_TEST, test x$test = xtrue)
+
 AC_SUBST(CONFIG_CFLAGS)
 
-#VERSION_INFO="0:4:1"
+#VERSION_INFO="0:4:2"
 #AC_SUBST(VERSION_INFO)
 
 AC_OUTPUT([
@@ -73,3 +89,10 @@ AC_OUTPUT([
   include/Makefile
   minstack.pc
 ])
+
+echo "Minstack build configuration ended."
+
+if test x$test = xtrue ; then
+	echo "* Test applications are compiled."
+fi
+echo "Just type 'make' to compile, and then 'make install' as root to install it."

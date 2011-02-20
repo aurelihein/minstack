@@ -48,7 +48,7 @@ typedef struct {
 
 enum minstack_status_enum { IDLE=0, STARTED};
 
-enum minstack_tcp_type_enum { NONE=0,SERVER,CLIENT};
+enum minstack_type_enum { NONE=0,SERVER,CLIENT};
 
 //typedef int (*_common_vg_handle_message_fp)(common_connection_info*, global_structure*);
 typedef int (*_minstack_tcp_new_connection)(int cid, struct sockaddr_in *cli_addr);
@@ -59,10 +59,9 @@ typedef void (*_minstack_tcp_external_read_socket)(int cid,char *buffer,unsigned
 
 struct minstack_tcp_struct {
 	const char *name;
-	enum minstack_tcp_type_enum type;
+	enum minstack_type_enum type;
 	enum minstack_status_enum status;
 	unsigned int port;
-	//char address[IPV4_LENGTH];
 	const char *address;
 	unsigned int receive_loop_usleep;
 	int listen_socket_fd;
@@ -77,6 +76,23 @@ struct minstack_tcp_struct {
 	int pthread_reading_thread_stop;
 	pthread_t pthread_accept_thread;
 	int pthread_accept_thread_stop;
+};
+
+struct minstack_udp_struct {
+    const char *name;
+    enum minstack_type_enum type;
+    enum minstack_status_enum status;
+    unsigned int port;
+    const char *address;
+    unsigned int receive_loop_usleep;
+    int listen_socket_fd;
+    unsigned int max_client_nb;
+    pthread_mutex_t mutex;
+    sockets sockets;
+    pthread_t pthread_reading_thread;
+    int pthread_reading_thread_stop;
+    pthread_t pthread_accept_thread;
+    int pthread_accept_thread_stop;
 };
 
 #endif /* PRIVATE_H_ */

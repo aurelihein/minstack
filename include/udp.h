@@ -17,38 +17,28 @@
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.*
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef TCP_H_
-#define TCP_H_
+#ifndef UDP_H_
+#define UDP_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct minstack_tcp_struct;
+struct minstack_udp_struct;
 /**
- * minstack_tcp is the main structure for TCP transactions
- * @ingroup TCP
+ * minstack_udp is the main structure for UDP transactions
+ * @ingroup UDP
  */
-typedef struct minstack_tcp_struct minstack_tcp;
+typedef struct minstack_udp_struct minstack_udp;
 
-minstack_tcp * minstack_tcp_init(const char *nickname);
-void minstack_tcp_uninit(minstack_tcp *mt);
-int minstack_tcp_start(minstack_tcp *mt);
-int minstack_tcp_stop(minstack_tcp *mt);
-int minstack_tcp_init_server(minstack_tcp *ts, int port,unsigned int max_client_number);
-int minstack_tcp_init_client(minstack_tcp *ts, int port, const char *address);
-minstack_tcp *minstack_tcp_start_a_client(const char *nickname, int port, const char *address);
-minstack_tcp *minstack_tcp_start_a_server(const char *nickname, int port, int max_client_number);
-void minstack_tcp_set_receive_loop_usleep(minstack_tcp *ts,unsigned int usleepvalue);
-unsigned int minstack_tcp_get_receive_loop_usleep(minstack_tcp *ts);
-int minstack_tcp_write_to_client(minstack_tcp *ts,int cid,char *message,int len_message);
-int minstack_tcp_write_to_server(minstack_tcp *mt,char *message,int len_message);
-void minstack_tcp_printf(minstack_tcp *mt,const char *msg, ...);
-int minstack_tcp_set_external_read_function(minstack_tcp *mt,void (*function)(int cid,char *buffer,unsigned int buffer_size_returned));
-minstack_tcp *minstack_tcp_start_a_server_with_read_function(const char *nickname, int port, int max_client_number,void (*function)(int cid,char *buffer,unsigned int buffer_size_returned));
+minstack_udp * minstack_udp_init(const char *nickname);
+void minstack_udp_uninit(minstack_udp *mu);
+int minstack_udp_init_server(minstack_udp *mu, int port,unsigned int max_client_number);
+
+int minstack_udp_stop(minstack_udp *mu);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* TCP_H_ */
+#endif /* UDP_H_ */
