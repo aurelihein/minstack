@@ -22,7 +22,7 @@ Email		: a_bouin@yahoo.fr
 License		: GPLv3
 Home Page	: ...
 
-minstack is a GPL v3 library that help the implentation of UDP/TCP trasactions.
+minstack is a GPL v3 library that help the implentation of UDP/TCP transactions.
 It aims to implement a minimal stack with a very simple high layer API.
 
 Features :
@@ -31,6 +31,8 @@ Features :
 minstack has support for :
  - TCP client
  - TCP server
+ - UDP client
+ - UDP server
 
 Installation procedure:
 -----------------------

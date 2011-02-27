@@ -5,8 +5,8 @@ lib_LTLIBRARIES = libminstack.la
 libminstack_la_SOURCES= \
 	tcp.c \
 	minstack_debug.c \
-	private.h 
-##	udp.c \
+	private.h \
+	udp.c
 
 libminstack_la_CPPFLAGS= -D_GNU_SOURCE
 libminstack_la_CFLAGS= -Wall -I$(top_srcdir)/include $(CONFIG_CFLAGS)

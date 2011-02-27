@@ -21,8 +21,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
-#include <tcp.h>
+#include <udp.h>
 #include <minstack_debug.h>
+
 int run = 1;
 
 void usage(const char *appli);
@@ -30,40 +31,47 @@ void stop(int exit_status);
 void listenner(int cid,char *buffer,unsigned int buffer_size_returned);
 
 int main (int argc, char **argv){
-	minstack_tcp *mt_listen;
-	int count = 1;
-	if(argc != 3)
+	minstack_udp *mu_listen;
+	if(argc != 2)
 		usage(argv[0]);
 
 	signal(SIGABRT, stop);
 	signal(SIGTERM, stop);
 	signal(SIGINT, stop);
 
-	printf("starting %s on the address %s port %d\n",argv[0],argv[1],atoi(argv[2]));
-	mt_listen = minstack_tcp_init("The minstack client test");
-	if(minstack_tcp_init_client(mt_listen,atoi(argv[2]),argv[1]))
+	printf("starting %s on the port %d\n",argv[0],atoi(argv[1]));
+	minstack_set_debug_level(MINSTACK_DEBUG_LEVEL);
+#if 0
+	mu_listen = minstack_udp_init("The minstack UDP server test");
+	if(minstack_udp_init_server(mu_listen,atoi(argv[1]),10))
 	{
-		printf("We could not initialized the client test...\n");
+		printf("We could not initialized the server test...\n");
 		return 0;
 	}
-	minstack_tcp_set_external_read_function(mt_listen,listenner);
-	minstack_set_debug_level(MINSTACK_WARNING_LEVEL);
-	minstack_tcp_start(mt_listen);
-	while(run)
+	minstack_udp_set_external_read_function(mu_listen,listenner);
+	minstack_udp_start(mu_listen);
+#else
+	mu_listen = minstack_udp_start_a_server_with_read_function("The minstack server test", atoi(argv[1]), 10,listenner);
+	if(mu_listen == NULL)
 	{
-		minstack_tcp_printf(mt_listen,"Hi server, It's %s, your best client that is talking to you %d!!!\n",argv[0],count++);
-		usleep(30*1000);
+		printf("We could not initialized the server test...\n");
+		return 0;
 	}
+#endif
+	while(run)
+		usleep(1*1000*1000);
 	printf("stopping %s\n",argv[0]);
-	minstack_tcp_stop(mt_listen);
-	minstack_tcp_uninit(mt_listen);
+#if 0
+	minstack_udp_stop(mu_listen);
+#endif
+	minstack_udp_uninit(mu_listen);
 	return 0;
 }
 
 void usage(const char *appli)
 {
-	printf("%s have to be started with the address and the port number of the server\n",appli);
-	printf("example: %s \"127.0.0.1\" 10000   will start a client connected on the server 127.0.0.1:10000\n",appli);
+	printf("%s have to be started with the port number to listen too\n",appli);
+	printf("example: %s 10000    will start a server that listen on the port 10000\n",appli);
 	exit(0);
 }
 
@@ -74,6 +82,9 @@ void stop(int exit_status)
 
 void listenner(int cid,char *buffer,unsigned int buffer_size_returned)
 {
-	printf("<%d>%s\n",cid,buffer);
+	if(buffer && buffer_size_returned)
+	{
+	    printf("<RECV>%s\n",buffer);
+	}
 }
 

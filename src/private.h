@@ -31,10 +31,8 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
-//#include "tcp.h"
-
 #ifndef DEFAULT_READ_BUFFER_SIZE
-#define DEFAULT_READ_BUFFER_SIZE	(1024)
+#define DEFAULT_READ_BUFFER_SIZE	(256)
 #endif
 
 
@@ -56,6 +54,9 @@ typedef int (*_minstack_tcp_connection_closed)(sockets *s, int cid);
 typedef char * (*_minstack_tcp_read_socket)(int cid,unsigned int *buffer_size_returned);
 typedef void (*_minstack_tcp_external_read_socket)(int cid,char *buffer,unsigned int buffer_size_returned);
 //typedef int (*_common_vg_get_local_mid_fp)(void);
+
+typedef char * (*_minstack_udp_read_socket)(int cid,unsigned int *buffer_size_returned);
+typedef void (*_minstack_udp_external_read_socket)(int cid,char *buffer,unsigned int buffer_size_returned);
 
 struct minstack_tcp_struct {
 	const char *name;
@@ -88,11 +89,10 @@ struct minstack_udp_struct {
     int listen_socket_fd;
     unsigned int max_client_nb;
     pthread_mutex_t mutex;
-    sockets sockets;
+    _minstack_udp_read_socket read_socket;
+    _minstack_udp_external_read_socket external_read_socket;
     pthread_t pthread_reading_thread;
     int pthread_reading_thread_stop;
-    pthread_t pthread_accept_thread;
-    int pthread_accept_thread_stop;
 };
 
 #endif /* PRIVATE_H_ */

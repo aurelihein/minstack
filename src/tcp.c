@@ -499,8 +499,7 @@ int minstack_tcp_write_to_client(minstack_tcp *mt, int cid, char *message,
  * \param len_message is the length of the message
  * \return 0 if OK
  */
-int minstack_tcp_write_to_server(minstack_tcp *mt, char *message,
-        int len_message) {
+int minstack_tcp_write_to_server(minstack_tcp *mt, char *message, int len_message) {
     if (!mt) {
         //printerror("the minstack_tcp is NULL\n");
         return -100;

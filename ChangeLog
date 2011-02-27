@@ -1,2 +1,4 @@
-v1.0.0 : (20101219)
- * Creation of min stack
+v0.4.0 : (20101219)
+ * Creation of minstack
+ v0.5.0 : (20110220)
+ * Adding the support for UDP transactions

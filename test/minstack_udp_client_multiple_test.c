@@ -21,16 +21,17 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
-#include <tcp.h>
-#include <minstack_debug.h>
-int run = 1;
 
+#include <udp.h>
+#include <minstack_debug.h>
+
+int run = 1;
+unsigned long loop = 0;
 void usage(const char *appli);
 void stop(int exit_status);
-void listenner(int cid,char *buffer,unsigned int buffer_size_returned);
 
 int main (int argc, char **argv){
-	minstack_tcp *mt_listen;
+	minstack_udp *mu_listen;
 	if(argc != 3)
 		usage(argv[0]);
 
@@ -39,20 +40,22 @@ int main (int argc, char **argv){
 	signal(SIGINT, stop);
 
 	printf("starting %s on the address %s port %d\n",argv[0],argv[1],atoi(argv[2]));
-	mt_listen = minstack_tcp_init("The minstack client test");
-	if(minstack_tcp_init_client(mt_listen,atoi(argv[2]),argv[1]))
+	while(run)
 	{
-		printf("We could not initialized the client test...\n");
-		return 0;
+		loop++;
+		printf("starting client %d\n",loop);
+		mu_listen = minstack_udp_start_a_client("multiple client test",atoi(argv[2]),argv[1]);
+		if(!mu_listen)
+		{
+			printf("We could not initialized the client test...\n");
+			return 0;
+		}
+		usleep(100*1000);
+		minstack_udp_printf(mu_listen,"I am the %d\n",loop);
+		minstack_udp_uninit(mu_listen);
+
 	}
-	minstack_tcp_set_external_read_function(mt_listen,listenner);
-	minstack_set_debug_level(MINSTACK_WARNING_LEVEL);
-	minstack_tcp_start(mt_listen);
-	usleep(100*1000);
-	minstack_tcp_printf(mt_listen,"Hi server, It's %s, your best client that is talking to you :-) !!!\n",argv[0]);
 	printf("stopping %s\n",argv[0]);
-	minstack_tcp_stop(mt_listen);
-	minstack_tcp_uninit(mt_listen);
 	return 0;
 }
 
@@ -67,9 +70,3 @@ void stop(int exit_status)
 {
 	run = 0;
 }
-
-void listenner(int cid,char *buffer,unsigned int buffer_size_returned)
-{
-	printf("<%d>%s\n",cid,buffer);
-}
-
