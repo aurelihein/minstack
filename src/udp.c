@@ -20,17 +20,22 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <sys/types.h>
 #include <pthread.h>
-#include <error.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <arpa/inet.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <fcntl.h>
 #include <errno.h>
+
+#ifndef WIN32
+#include <sys/socket.h>
+#include <error.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#else
+#include <winsock2.h>
+#endif
 
 #include "minstack_debug.h"
 #include "private.h"
@@ -46,6 +51,9 @@ char *minstack_udp_default_read(int cid, unsigned int *buffer_size_returned);
  * \return the minstack_udp generated
  */
 minstack_udp * minstack_udp_init(const char *nickname) {
+#ifdef WIN32
+    win32_init_socket_api();
+#endif
     minstack_udp *mu = (minstack_udp *) calloc(1, sizeof(minstack_udp));
     if (mu == NULL) {
         printerror("Could not allocate a minstack_udp\n");
@@ -75,6 +83,9 @@ void minstack_udp_uninit(minstack_udp *mu) {
     }
     printmessage("%s minstack UDP has been uninitialized\n",mu->name);
     free(mu);
+#ifdef WIN32
+    win32_uninit_socket_api();
+#endif
 }
 
 /**
@@ -368,8 +379,13 @@ int minstack_udp_boot_client(minstack_udp *mu) {
     }
     memset((char *) &serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
+#ifndef WIN32
     bcopy((char *) server->h_addr, (char *) &serv_addr.sin_addr.s_addr,
             server->h_length);
+#else
+    memcpy((char *) &serv_addr.sin_addr.s_addr,(char *) server->h_addr,
+            server->h_length);
+#endif
     serv_addr.sin_port = htons(mu->port);
     if (connect(mu->listen_socket_fd, (const struct sockaddr *) &serv_addr,
             (socklen_t) sizeof(serv_addr)) < 0) {
@@ -390,9 +406,9 @@ int minstack_udp_stop(minstack_udp *mu) {
         printerror("Cannot stop while not started\n");
         return -1;
     }
-    if (mu->pthread_reading_thread && !mu->pthread_reading_thread) {
+    if (&mu->pthread_reading_thread && !mu->pthread_reading_thread_stop) {
         printdebug("The reading thread is asked to stop\n");
-        mu->pthread_reading_thread = 1;
+        mu->pthread_reading_thread_stop = 1;
         pthread_join(mu->pthread_reading_thread, NULL);
         printmessage("The reading thread stopped\n");
     }

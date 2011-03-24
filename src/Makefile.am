@@ -3,9 +3,10 @@
 lib_LTLIBRARIES = libminstack.la
 
 libminstack_la_SOURCES= \
+	private.c \
+	private.h \
 	tcp.c \
 	minstack_debug.c \
-	private.h \
 	udp.c
 
 libminstack_la_CPPFLAGS= -D_GNU_SOURCE

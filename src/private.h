@@ -23,14 +23,16 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <sys/types.h>
 #include <pthread.h>
+
+#ifndef WIN32
+#include <sys/socket.h>
 #include <error.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-
+#endif
 #ifndef DEFAULT_READ_BUFFER_SIZE
 #define DEFAULT_READ_BUFFER_SIZE	(256)
 #endif
@@ -94,5 +96,15 @@ struct minstack_udp_struct {
     pthread_t pthread_reading_thread;
     int pthread_reading_thread_stop;
 };
+
+#ifdef WIN32
+int win32_init_socket_api(void);
+int win32_uninit_socket_api(void);
+typedef int socklen_t;
+#endif
+
+#ifndef MSG_DONTWAIT
+#define MSG_DONTWAIT    (0)
+#endif
 
 #endif /* PRIVATE_H_ */

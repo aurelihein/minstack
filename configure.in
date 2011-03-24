@@ -12,7 +12,7 @@ dnl *********************************************************************
 dnl Source packaging numbers
 MINSTACK_MAJOR_VERSION=0
 MINSTACK_MINOR_VERSION=5
-MINSTACK_MICRO_VERSION=1
+MINSTACK_MICRO_VERSION=2
 MINSTACK_VERSION=$MINSTACK_MAJOR_VERSION.$MINSTACK_MINOR_VERSION.$MINSTACK_MICRO_VERSION
 
 VERSION=$MINSTACK_VERSION
@@ -34,6 +34,34 @@ AC_LIBTOOL_WIN32_DLL
 LT_AC_PROG_SED
 AC_PROG_LIBTOOL
 
+case $target_os in
+	*mingw32ce)
+       	CFLAGS="$CFLAGS -D_WIN32_WCE -D_WIN32_WINNT=0x0501"
+       	CXXFLAGS="$CXXFLAGS -D_WIN32_WINNT=0x0501"
+       	LIBS="$LIBS -lws2 -liphlpapi"
+		mingw_found=yes
+		mingwce_found=yes
+		;;
+	*mingw*)
+		CFLAGS="$CFLAGS -D_WIN32_WINNT=0x0501 "
+		CXXFLAGS="$CXXFLAGS -D_WIN32_WINNT=0x0501"
+		LIBS="$LIBS -lws2_32 lwsock32 -lwinmm"
+		mingw_found=yes
+	;;
+	*darwin*)
+		dnl use macport installation
+		ACLOCAL_MACOS_FLAGS="-I /opt/local/share/aclocal"
+	;;
+esac
+
+AC_CONFIG_COMMANDS([libtool-hacking],[
+if test "$mingw_found" = "yes" ; then
+	echo "Hacking libtool to work with mingw..."
+	sed -e 's/\*\" \$a_deplib \"\*/\*/' < ./libtool > libtool.tmp
+	cp -f ./libtool.tmp ./libtool
+	rm -f ./libtool.tmp
+fi
+],[mingw_found=$mingw_found])
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h netdb.h netinet/in.h string.h sys/socket.h unistd.h])
