@@ -16,37 +16,27 @@
  *  along with this program; if not, write to the Free Software                *
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.*
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#ifdef WIN32 /* si vous tes sous Windows */
-#include <winsock2.h>
-#endif
 
-#include "private.h"
+#ifndef MINSTACK_DEBUG_H_
+#define MINSTACK_DEBUG_H_
 
-#ifdef WIN32
-int win32_init_socket_api(void){
-    WORD wVersionRequested;
-    WSADATA wsaData;
-    int i;
+int minstack_allow_print_debug(unsigned int value);
+void minstack_set_debug_level(unsigned int value);
 
-    wVersionRequested = MAKEWORD(2,2);
-    if( (i = WSAStartup(wVersionRequested,  &wsaData))!=0)
-    {
-        fprintf(stderr,"Unable to initialize windows socket api, reason: %d (%s)",i,WSAGetLastError());
-        return FALSE;
-    }
-    return TRUE;
-}
+#define MINSTACK_DEBUG_LEVEL		(0)
+#define MINSTACK_MESSAGE_LEVEL		(1)
+#define MINSTACK_WARNING_LEVEL		(2)
+#define MINSTACK_ERROR_LEVEL		(3)
 
-int win32_uninit_socket_api(void){
-    return WSACleanup();
-}
-#endif
+#define minstack_print_debug(level, fmt, arg...)     if (minstack_allow_print_debug(level)) \
+        printf("<%d> " fmt ,level, ## arg)
 
-int minstack_close(int fd){
-#ifdef WIN32
-    return closesocket(fd);
-#else
-    return close(fd);
-#endif
+#define printdebug(fmt,arg...)		minstack_print_debug(MINSTACK_DEBUG_LEVEL,fmt,##arg)
+#define printmessage(fmt,arg...)	minstack_print_debug(MINSTACK_MESSAGE_LEVEL,fmt,##arg)
+#define printwarning(fmt,arg...)	minstack_print_debug(MINSTACK_WARNING_LEVEL,fmt,##arg)
+#define printerror(fmt,arg...)		minstack_print_debug(MINSTACK_ERROR_LEVEL,fmt,##arg)
+#define printmoreerror(msg)			perror(msg);
 
-}
+#define printline					printf("%s(%d)\n",__FUNCTION__,__LINE__);
+
+#endif /* MINSTACK_DEBUG_H_ */

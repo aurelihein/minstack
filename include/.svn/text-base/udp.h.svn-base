@@ -16,37 +16,37 @@
  *  along with this program; if not, write to the Free Software                *
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.*
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#ifdef WIN32 /* si vous tes sous Windows */
-#include <winsock2.h>
+
+#ifndef UDP_H_
+#define UDP_H_
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-#include "private.h"
+struct minstack_udp_struct;
+/**
+ * minstack_udp is the main structure for UDP transactions
+ * @ingroup UDP
+ */
+typedef struct minstack_udp_struct minstack_udp;
 
-#ifdef WIN32
-int win32_init_socket_api(void){
-    WORD wVersionRequested;
-    WSADATA wsaData;
-    int i;
+minstack_udp * minstack_udp_init(const char *nickname);
+void minstack_udp_uninit(minstack_udp *mu);
+minstack_udp *minstack_udp_start_a_client(const char *nickname, int port, const char *address);
+minstack_udp *minstack_udp_start_a_server(const char *nickname, int port, int max_client_number);
+int minstack_udp_init_server(minstack_udp *mu, int port,unsigned int max_client_number);
+minstack_udp *minstack_udp_start_a_server_with_read_function(
+        const char *nickname, int port, int max_client_number, void(*function)(
+                int cid, char *buffer, unsigned int buffer_size_returned));
+int minstack_udp_set_external_read_function(minstack_udp *mu, void(*function)(int cid, char *buffer, unsigned int buffer_size_returned));
+int minstack_udp_start(minstack_udp *mu);
+int minstack_udp_stop(minstack_udp *mu);
+int minstack_udp_write(minstack_udp *mu, char *message, int len_message);
+void minstack_udp_printf(minstack_udp *mu, const char *msg, ...);
 
-    wVersionRequested = MAKEWORD(2,2);
-    if( (i = WSAStartup(wVersionRequested,  &wsaData))!=0)
-    {
-        fprintf(stderr,"Unable to initialize windows socket api, reason: %d (%s)",i,WSAGetLastError());
-        return FALSE;
-    }
-    return TRUE;
-}
-
-int win32_uninit_socket_api(void){
-    return WSACleanup();
+#ifdef __cplusplus
 }
 #endif
 
-int minstack_close(int fd){
-#ifdef WIN32
-    return closesocket(fd);
-#else
-    return close(fd);
-#endif
-
-}
+#endif /* UDP_H_ */

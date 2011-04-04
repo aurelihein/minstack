@@ -20,21 +20,17 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/socket.h>
 #include <sys/types.h>
 #include <pthread.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <fcntl.h>
-#include <errno.h>
-#ifndef WIN32
-#include <sys/socket.h>
 #include <error.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-#else
-#include <winsock2.h>
-#endif
+#include <stdlib.h>
+#include <stdarg.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #include "minstack_debug.h"
 #include "private.h"
@@ -95,7 +91,7 @@ char *minstack_tcp_default_read(int cid, unsigned int *buffer_size_returned) {
             finished = 0;
         } else if (retval < 0) {
             //printmoreerror("we had a problem to read");
-            printdebug("we had a problem to read\n");
+            printdebug("we had a problem to read");
             free(buffer);
             *buffer_size_returned = 0;
             return NULL;
@@ -212,13 +208,13 @@ void *minstack_tcp_reading_thread(void *ptr) {
                 if (mt && mt->connection_closed_callback
                         && (mt->type == SERVER)) {
                     mt->connection_closed_callback(&mt->sockets, socket_to_read);
-                    minstack_close(socket_to_read);
+                    close(socket_to_read);
                     printdebug("Closing the socket %d\n",socket_to_read);
                 }
                 pthread_mutex_unlock(&mt->mutex);
                 if (mt && (mt->type == CLIENT)) {
                     printmessage("The server do not exists anymore we will close the connection\n");
-                    minstack_close(socket_to_read);
+                    close(socket_to_read);
                     minstack_tcp_stop(mt);
                 }
             } else {
@@ -251,17 +247,14 @@ void *minstack_tcp_accept_thread(void *ptr) {
 
         memset((char *) &cli_addr, 0, sizeof(cli_addr));
         cli_len = sizeof(cli_addr);
-#ifdef WIN32
-        tmp_clisockfd = accept(mt->listen_socket_fd, (struct sockaddr *) &cli_addr,(int *) &cli_len);
-#else
-        tmp_clisockfd = accept(mt->listen_socket_fd, (struct sockaddr *) &cli_addr, &cli_len);
-#endif
+        tmp_clisockfd = accept(mt->listen_socket_fd,
+                (struct sockaddr *) &cli_addr, &cli_len);
         if (tmp_clisockfd == -1) {
             usleep(mt->receive_loop_usleep);
             continue;
         } else if (tmp_clisockfd <= 0) {
             printerror("error :%d\n",tmp_clisockfd);
-            printmoreerror("ERROR on accept:");
+            printmoreerror("ERROR on accept");
             break;
         }
         pthread_mutex_lock(&mt->mutex);
@@ -277,10 +270,8 @@ void *minstack_tcp_accept_thread(void *ptr) {
             continue;
         }
     }
-    //TODO what is this ?!!!
-    //before was //if (mt->pthread_reading_thread && !mt->pthread_reading_thread) {
-    if (&mt->pthread_reading_thread && !mt->pthread_reading_thread_stop){
-        mt->pthread_reading_thread_stop = 1;
+    if (mt->pthread_reading_thread && !mt->pthread_reading_thread) {
+        mt->pthread_reading_thread = 1;
         pthread_join(mt->pthread_reading_thread, NULL);
         printmessage("The reading thread stopped\n");
     }
@@ -302,23 +293,13 @@ int minstack_tcp_boot_server(minstack_tcp *mt) {
     pthread_mutex_lock(&mt->mutex);
     mt->listen_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (mt->listen_socket_fd < 0) {
-        printmoreerror("ERROR opening socket:");
+        printmoreerror("ERROR opening socket");
         return -2;
     }
-#ifndef WIN32
     if (fcntl(mt->listen_socket_fd, F_SETFL, O_NONBLOCK) < 0) {
-        printmoreerror("Could not O_NONBLOCK:");
+        printmoreerror("Could not O_NONBLOCK");
         return -3;
     }
-#else
-    {
-        u_long imode = 1;
-        if(ioctlsocket(mt->listen_socket_fd,FIONBIO,&imode)  < 0) {
-            printmoreerror("Could not O_NONBLOCK:");
-            return -3;
-        }
-    }
-#endif
     memset((char *) &serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
@@ -354,7 +335,7 @@ int minstack_tcp_boot_client(minstack_tcp *mt) {
 
     mt->listen_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (mt->listen_socket_fd < 0) {
-        printmoreerror("ERROR opening socket:");
+        printmoreerror("ERROR opening socket");
         return -2;
     }
     server = gethostbyname(mt->address);
@@ -364,17 +345,12 @@ int minstack_tcp_boot_client(minstack_tcp *mt) {
     }
     memset((char *) &serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
-#ifndef WIN32
     bcopy((char *) server->h_addr, (char *) &serv_addr.sin_addr.s_addr,
             server->h_length);
-#else
-    memcpy( (char *) &serv_addr.sin_addr.s_addr,(char *) server->h_addr,
-            server->h_length);
-#endif
     serv_addr.sin_port = htons(mt->port);
     if (connect(mt->listen_socket_fd, (const struct sockaddr *) &serv_addr,
             (socklen_t) sizeof(serv_addr)) < 0) {
-        printmoreerror("ERROR connecting:");
+        printmoreerror("ERROR connecting");
         return -4;
     }
     if (mt->external_read_socket == NULL) {
@@ -435,20 +411,20 @@ int minstack_tcp_stop(minstack_tcp *mt) {
         printerror("Cannot stop while not started\n");
         return -1;
     }
-    if (&mt->pthread_accept_thread && !mt->pthread_accept_thread_stop) {
+    if (mt->pthread_accept_thread && !mt->pthread_accept_thread_stop) {
         printdebug("The accepting thread is asked to stop\n");
         mt->pthread_accept_thread_stop = 1;
         pthread_join(mt->pthread_accept_thread, NULL);
         printmessage("The accepting thread stopped\n");
     }
-    if (&mt->pthread_reading_thread && !mt->pthread_reading_thread_stop) {
+    if (mt->pthread_reading_thread && !mt->pthread_reading_thread) {
         printdebug("The reading thread is asked to stop\n");
-        mt->pthread_reading_thread_stop = 1;
+        mt->pthread_reading_thread = 1;
         pthread_join(mt->pthread_reading_thread, NULL);
         printmessage("The reading thread stopped\n");
     }
     if (mt->listen_socket_fd)
-        minstack_close(mt->listen_socket_fd);
+        close(mt->listen_socket_fd);
     pthread_mutex_destroy(&mt->mutex);
     mt->status = IDLE;
     printmessage("%s is now stopped\n",mt->name);
@@ -463,14 +439,14 @@ int minstack_tcp_stop(minstack_tcp *mt) {
  * \param len_message the message length
  * \return 0 if the minstack_tcp stack stopped correctly
  */
-int minstack_tcp_write(minstack_tcp *mt, int cid, char *message, int len_message) {
+int minstack_tcp_write(minstack_tcp *mt, int cid, char *message,
+        int len_message) {
     if (!mt) {
         printerror("the minstack_tcp is NULL\n");
         return -100;
     }
-    //if (write(cid, message, len_message) < 0) {
-    if(send(cid, message, len_message,0) < 0){
-        printerror("ERROR writing to socket %d\n",cid);
+    if (write(cid, message, len_message) < 0) {
+        printerror("ERROR writing to socket %d",cid);
         return -1;
     }
     printmessage("%s sent:%s length:%d to cid:%d\n",mt->name,message,len_message,cid);
@@ -497,7 +473,7 @@ int minstack_tcp_write_to_client(minstack_tcp *mt, int cid, char *message,
         return -1;
     }
     if (mt->status != STARTED) {
-        printwarning("The server is not started yet\n");
+        printwarning("The server is not started yet \n");
         return -1;
     }
     if (cid)
@@ -533,10 +509,15 @@ int minstack_tcp_write_to_server(minstack_tcp *mt, char *message, int len_messag
         return -1;
     }
     if (mt->status != STARTED) {
-        printwarning("The client is not started yet\n");
+        printwarning("The client is not started yet \n");
         return -1;
     }
-    return minstack_tcp_write(mt,mt->listen_socket_fd, message, len_message);
+    if (write(mt->listen_socket_fd, message, len_message) < 0) {
+        printerror("ERROR writing to server socket %d",mt->listen_socket_fd);
+        return -2;
+    }
+    printmessage("sent:%s length:%d to cid:%d\n",message,len_message,mt->listen_socket_fd);
+    return 0;
 }
 
 #define BUF_LEN	(4096)
@@ -548,8 +529,7 @@ int minstack_tcp_write_to_server(minstack_tcp *mt, char *message, int len_messag
  */
 void minstack_tcp_printf(minstack_tcp *mt, const char *msg, ...) {
     va_list args;
-    //char *p;
-    char buffer[BUF_LEN];
+    char *p, buffer[BUF_LEN];
     int nb_char_written;
 
     if (!mt) {
@@ -566,7 +546,6 @@ void minstack_tcp_printf(minstack_tcp *mt, const char *msg, ...) {
     if (nb_char_written == -1)
         strcpy(buffer, "internal vsnprintf error");
 
-    /*
     // remplace d'enventuels \n par un | (sauf en fin de buffer)
     p = buffer;
     while (*p != '\0') {
@@ -576,7 +555,7 @@ void minstack_tcp_printf(minstack_tcp *mt, const char *msg, ...) {
     }
     if (*(p - 1) == '|')
         *(p - 1) = '\0';
-    */
+
     if (mt->type == CLIENT)
         minstack_tcp_write_to_server(mt, buffer, nb_char_written);
     else
@@ -589,9 +568,6 @@ void minstack_tcp_printf(minstack_tcp *mt, const char *msg, ...) {
  * \return the minstack_tcp generated
  */
 minstack_tcp * minstack_tcp_init(const char *nickname) {
-#ifdef WIN32
-    win32_init_socket_api();
-#endif
     minstack_tcp *mt = (minstack_tcp *) calloc(1, sizeof(minstack_tcp));
     if (mt == NULL) {
         printerror("Could not allocate a minstack_tcp\n");
@@ -621,9 +597,6 @@ void minstack_tcp_uninit(minstack_tcp *mt) {
     }
     printmessage("%s minstack TCP has been uninitialized\n",mt->name);
     free(mt);
-#ifdef WIN32
-    win32_uninit_socket_api();
-#endif
 }
 
 /**

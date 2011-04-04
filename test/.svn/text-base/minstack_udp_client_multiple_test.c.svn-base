@@ -16,37 +16,57 @@
  *  along with this program; if not, write to the Free Software                *
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.*
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#ifdef WIN32 /* si vous tes sous Windows */
-#include <winsock2.h>
-#endif
 
-#include "private.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <signal.h>
 
-#ifdef WIN32
-int win32_init_socket_api(void){
-    WORD wVersionRequested;
-    WSADATA wsaData;
-    int i;
+#include <udp.h>
+#include <minstack_debug.h>
 
-    wVersionRequested = MAKEWORD(2,2);
-    if( (i = WSAStartup(wVersionRequested,  &wsaData))!=0)
-    {
-        fprintf(stderr,"Unable to initialize windows socket api, reason: %d (%s)",i,WSAGetLastError());
-        return FALSE;
-    }
-    return TRUE;
+int run = 1;
+unsigned long loop = 0;
+void usage(const char *appli);
+void stop(int exit_status);
+
+int main (int argc, char **argv){
+	minstack_udp *mu_listen;
+	if(argc != 3)
+		usage(argv[0]);
+
+	signal(SIGABRT, stop);
+	signal(SIGTERM, stop);
+	signal(SIGINT, stop);
+
+	printf("starting %s on the address %s port %d\n",argv[0],argv[1],atoi(argv[2]));
+	while(run)
+	{
+		loop++;
+		printf("starting client %d\n",loop);
+		mu_listen = minstack_udp_start_a_client("multiple client test",atoi(argv[2]),argv[1]);
+		if(!mu_listen)
+		{
+			printf("We could not initialized the client test...\n");
+			return 0;
+		}
+		usleep(100*1000);
+		minstack_udp_printf(mu_listen,"I am the %d\n",loop);
+		minstack_udp_uninit(mu_listen);
+
+	}
+	printf("stopping %s\n",argv[0]);
+	return 0;
 }
 
-int win32_uninit_socket_api(void){
-    return WSACleanup();
+void usage(const char *appli)
+{
+	printf("%s have to be started with the address and the port number of the server\n",appli);
+	printf("example: %s \"127.0.0.1\" 10000   will start a client connected on the server 127.0.0.1:10000\n",appli);
+	exit(0);
 }
-#endif
 
-int minstack_close(int fd){
-#ifdef WIN32
-    return closesocket(fd);
-#else
-    return close(fd);
-#endif
-
+void stop(int exit_status)
+{
+	run = 0;
 }

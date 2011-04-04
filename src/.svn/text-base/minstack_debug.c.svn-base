@@ -16,37 +16,31 @@
  *  along with this program; if not, write to the Free Software                *
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.*
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#ifdef WIN32 /* si vous tes sous Windows */
-#include <winsock2.h>
+
+#include "minstack_debug.h"
+
+#ifndef DEFAULT_DEBUG_LEVEL
+#define	DEFAULT_DEBUG_LEVEL	(MINSTACK_WARNING_LEVEL)
 #endif
 
-#include "private.h"
+unsigned int debug_level=DEFAULT_DEBUG_LEVEL;
 
-#ifdef WIN32
-int win32_init_socket_api(void){
-    WORD wVersionRequested;
-    WSADATA wsaData;
-    int i;
-
-    wVersionRequested = MAKEWORD(2,2);
-    if( (i = WSAStartup(wVersionRequested,  &wsaData))!=0)
-    {
-        fprintf(stderr,"Unable to initialize windows socket api, reason: %d (%s)",i,WSAGetLastError());
-        return FALSE;
-    }
-    return TRUE;
+/**
+ * \brief return if it is allowed or not to print the message depending of the level
+ * \param level the level of the message
+ * \return 0 if it cannot been displayed
+ */
+int minstack_allow_print_debug(unsigned int level){
+	if (level >= debug_level)
+		return 1;
+	return 0;
 }
 
-int win32_uninit_socket_api(void){
-    return WSACleanup();
-}
-#endif
-
-int minstack_close(int fd){
-#ifdef WIN32
-    return closesocket(fd);
-#else
-    return close(fd);
-#endif
-
+/**
+ * \brief set the debug level
+ * \param level the level to reach before displaying
+ */
+void minstack_set_debug_level(unsigned int value)
+{
+	debug_level=value;
 }

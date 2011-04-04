@@ -35,7 +35,12 @@ void minstack_set_debug_level(unsigned int value);
 #define printmessage(fmt,arg...)	minstack_print_debug(MINSTACK_MESSAGE_LEVEL,fmt,##arg)
 #define printwarning(fmt,arg...)	minstack_print_debug(MINSTACK_WARNING_LEVEL,fmt,##arg)
 #define printerror(fmt,arg...)		minstack_print_debug(MINSTACK_ERROR_LEVEL,fmt,##arg)
-#define printmoreerror(msg)			perror(msg);
+
+#ifndef WIN32
+    #define printmoreerror(msg)			perror(msg);
+#else
+    #define printmoreerror(msg)     printf("%s %s\n",msg,WSAGetLastError());
+#endif
 
 #define printline					printf("%s(%d)\n",__FUNCTION__,__LINE__);
 
