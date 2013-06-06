@@ -43,7 +43,7 @@ int main (int argc, char **argv){
 	while(run)
 	{
 		loop++;
-		printf("starting client %d\n",loop);
+		printf("starting client %ld\n",loop);
 		mt_listen = minstack_tcp_start_a_client("multiple client test",atoi(argv[2]),argv[1]);
 		if(!mt_listen)
 		{

@@ -53,12 +53,12 @@ enum minstack_type_enum { NONE=0,SERVER,CLIENT};
 //typedef int (*_common_vg_handle_message_fp)(common_connection_info*, global_structure*);
 typedef int (*_minstack_tcp_new_connection)(int cid, struct sockaddr_in *cli_addr);
 typedef int (*_minstack_tcp_connection_closed)(sockets *s, int cid);
-typedef char * (*_minstack_tcp_read_socket)(int cid,unsigned int *buffer_size_returned);
-typedef void (*_minstack_tcp_external_read_socket)(int cid,char *buffer,unsigned int buffer_size_returned);
+typedef int (*_minstack_tcp_read_socket)(int cid,char *from, char **buffer);
+typedef void (*_minstack_tcp_external_read_socket)(int cid, const char *from, char *buffer,unsigned int buffer_size_returned);
 //typedef int (*_common_vg_get_local_mid_fp)(void);
 
-typedef char * (*_minstack_udp_read_socket)(int cid,unsigned int *buffer_size_returned);
-typedef void (*_minstack_udp_external_read_socket)(int cid,char *buffer,unsigned int buffer_size_returned);
+typedef int (*_minstack_udp_read_socket)(int cid,char *from, char **buffer);
+typedef void (*_minstack_udp_external_read_socket)(int cid, const char *from, char *buffer,unsigned int buffer_size_returned);
 
 int minstack_close(int fd);
 
@@ -98,6 +98,8 @@ struct minstack_udp_struct {
     pthread_t pthread_reading_thread;
     int pthread_reading_thread_stop;
 };
+
+void *get_in_addr(struct sockaddr *sa);
 
 #ifdef WIN32
 int win32_init_socket_api(void);

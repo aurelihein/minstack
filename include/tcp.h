@@ -44,8 +44,14 @@ unsigned int minstack_tcp_get_receive_loop_usleep(minstack_tcp *ts);
 int minstack_tcp_write_to_client(minstack_tcp *ts,int cid,char *message,int len_message);
 int minstack_tcp_write_to_server(minstack_tcp *mt,char *message,int len_message);
 void minstack_tcp_printf(minstack_tcp *mt,const char *msg, ...);
-int minstack_tcp_set_external_read_function(minstack_tcp *mt,void (*function)(int cid,char *buffer,unsigned int buffer_size_returned));
-minstack_tcp *minstack_tcp_start_a_server_with_read_function(const char *nickname, int port, int max_client_number,void (*function)(int cid,char *buffer,unsigned int buffer_size_returned));
+#define minstack_tcp_printf_level0(fd , fmt, arg...)  minstack_tcp_printf(fd,"[0]"fmt, ## arg)
+#define minstack_tcp_printf_level1(fd , fmt, arg...)  minstack_tcp_printf(fd,"[1]"fmt, ## arg)
+#define minstack_tcp_printf_level2(fd , fmt, arg...)  minstack_tcp_printf(fd,"[2]"fmt, ## arg)
+#define minstack_tcp_printf_level3(fd , fmt, arg...)  minstack_tcp_printf(fd,"[3]"fmt, ## arg)
+#define minstack_tcp_printf_level4(fd , fmt, arg...)  minstack_tcp_printf(fd,"[4]"fmt, ## arg)
+#define minstack_tcp_printf_level5(fd , fmt, arg...)  minstack_tcp_printf(fd,"[5]"fmt, ## arg)
+int minstack_tcp_set_external_read_function(minstack_tcp *mt,void (*function)(int cid, const char *from,char *buffer,unsigned int buffer_size_returned));
+minstack_tcp *minstack_tcp_start_a_server_with_read_function(const char *nickname, int port, int max_client_number,void (*function)(int cid, const char *from,char *buffer,unsigned int buffer_size_returned));
 
 #ifdef __cplusplus
 }

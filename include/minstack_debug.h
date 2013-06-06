@@ -20,6 +20,10 @@
 #ifndef MINSTACK_DEBUG_H_
 #define MINSTACK_DEBUG_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int minstack_allow_print_debug(unsigned int value);
 void minstack_set_debug_level(unsigned int value);
 
@@ -43,5 +47,9 @@ void minstack_set_debug_level(unsigned int value);
 #endif
 
 #define printline					printf("%s(%d)\n",__FUNCTION__,__LINE__);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* MINSTACK_DEBUG_H_ */

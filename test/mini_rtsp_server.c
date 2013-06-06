@@ -36,7 +36,7 @@ enum all_status_rtsp_server rtsp_server_status;
 
 void usage(const char *appli);
 void stop(int exit_status);
-void rtsp_listenner(int cid,char *buffer,unsigned int buffer_size_returned);
+void rtsp_listenner(int cid,const char *from, char *buffer,unsigned int buffer_size_returned);
 void send_status(int fd,int status_code, const char *version, int cseq_read);
 
 int main (int argc, char **argv){
@@ -80,7 +80,7 @@ void stop(int exit_status)
 	run = 0;
 }
 
-void rtsp_listenner(int cid,char *buffer,unsigned int buffer_size_returned)
+void rtsp_listenner(int cid,const char *from, char *buffer,unsigned int buffer_size_returned)
 {
     char method[14];
     char version[9];
@@ -97,26 +97,28 @@ void rtsp_listenner(int cid,char *buffer,unsigned int buffer_size_returned)
     {
         printf("No Cseq in the message\n");
         printf("#########################################################\n");
-        printf("%s\n",buffer);
+        printf("%s:%s\n",from, buffer);
         printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
         return;
     }
 
     if(!strcmp("OPTIONS",method))
     {
+        int ret;
         char answer[1024];
         retval = snprintf(answer,sizeof(answer),"%s 200 OK\r\nCSeq: %d\r\nPublic: DESCRIBE, PLAY, TEARDOWN\r\n\r\n",version,cseq_read);
-        write(cid,answer,retval);
+        ret =write(cid,answer,retval);
     }
     else if(!strcmp("DESCRIBE",method))
     {
+        int ret;
         char answer[1024];
         retval = snprintf(answer,sizeof(answer),"%s 200 OK\r\nCSeq: %d\r\nCamera: %d\r\nCodecs: %s\r\n\r\n",version,cseq_read,handle_camera,"H264");
-        write(cid,answer,retval);
+        ret = write(cid,answer,retval);
     }
     else if(!strcmp("PLAY",method))
     {
-        char answer[1024];
+        //char answer[1024];
         char rtsp_ip[24];//XXX.XXX.XXX.XXX.XXX.XXX
         int rtsp_port;
         char rtsp_codec[10];
@@ -177,5 +179,5 @@ void send_status(int fd,int status_code, const char *version, int cseq_read)
     int retval;
 
     retval = snprintf(answer,sizeof(answer),"%s %d %s\r\nCSeq: %d\r\n\r\n",version, status_code,(status_code==200)?"OK":"KO",cseq_read);
-    write(fd,answer,retval);
+    retval = write(fd,answer,retval);
 }

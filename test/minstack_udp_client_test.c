@@ -27,18 +27,18 @@ int run = 1;
 
 void usage(const char *appli);
 void stop(int exit_status);
-void listenner(int cid,char *buffer,unsigned int buffer_size_returned);
+void listenner(int cid,const char *from,char *buffer,unsigned int buffer_size_returned);
 
 int main (int argc, char **argv){
 	minstack_udp *mu_listen;
-	if(argc != 3)
+	if(argc != 4)
 		usage(argv[0]);
 
 	signal(SIGABRT, stop);
 	signal(SIGTERM, stop);
 	signal(SIGINT, stop);
 
-	printf("starting %s on the address %s port %d\n",argv[0],argv[1],atoi(argv[2]));
+	printf("Starting %s on the address %s port %d sending %s\n",argv[0],argv[1],atoi(argv[2]),argv[3]);
 	mu_listen = minstack_udp_init("The minstack client test");
 	if(minstack_udp_init_client(mu_listen,atoi(argv[2]),argv[1]))
 	{
@@ -49,8 +49,8 @@ int main (int argc, char **argv){
 	minstack_set_debug_level(MINSTACK_WARNING_LEVEL);
 	minstack_udp_start(mu_listen);
 	usleep(100*1000);
-	minstack_udp_printf(mu_listen,"Hi server, It's %s, your best client that is talking to you :-) !!!\n",argv[0]);
-	printf("stopping %s\n",argv[0]);
+	minstack_udp_printf(mu_listen,"%s",argv[3]);
+	printf("Stopping %s\n",argv[0]);
 	minstack_udp_stop(mu_listen);
 	minstack_udp_uninit(mu_listen);
 	return 0;
@@ -58,7 +58,8 @@ int main (int argc, char **argv){
 
 void usage(const char *appli)
 {
-	printf("%s have to be started with the address and the port number of the server\n",appli);
+	printf("%s have to be started with the address and the port number of the server and after add the char sequence to send\n",appli);
+	printf("%s [\"IP\"] [port] [\"char sequence\"]\n",appli);
 	printf("example: %s \"127.0.0.1\" 10000   will start a client connected on the server 127.0.0.1:10000\n",appli);
 	exit(0);
 }
@@ -68,8 +69,8 @@ void stop(int exit_status)
 	run = 0;
 }
 
-void listenner(int cid,char *buffer,unsigned int buffer_size_returned)
+void listenner(int cid,const char *from, char *buffer,unsigned int buffer_size_returned)
 {
-	printf("<RECV>%s\n",buffer);
+	printf("<RECV>%s:%s\n",from,buffer);
 }
 

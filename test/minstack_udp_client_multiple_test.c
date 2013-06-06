@@ -43,7 +43,7 @@ int main (int argc, char **argv){
 	while(run)
 	{
 		loop++;
-		printf("starting client %d\n",loop);
+		printf("starting client %ld\n",loop);
 		mu_listen = minstack_udp_start_a_client("multiple client test",atoi(argv[2]),argv[1]);
 		if(!mu_listen)
 		{

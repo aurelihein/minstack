@@ -23,47 +23,47 @@
 #include <signal.h>
 #include <udp.h>
 #include <minstack_debug.h>
+
 int run = 1;
 
 void usage(const char *appli);
 void stop(int exit_status);
-void listenner(int cid,char *buffer,unsigned int buffer_size_returned);
+void listenner(int cid,const char *from,char *buffer,unsigned int buffer_size_returned);
 
 int main (int argc, char **argv){
 	minstack_udp *mu_listen;
-	int count = 1;
-	if(argc != 3)
-		usage(argv[0]);
+	int loop = 0;
+    if(argc < 2 || argc > 3)
+        usage(argv[0]);
 
 	signal(SIGABRT, stop);
 	signal(SIGTERM, stop);
 	signal(SIGINT, stop);
 
-	printf("starting %s on the address %s port %d\n",argv[0],argv[1],atoi(argv[2]));
-	mu_listen = minstack_udp_init("The minstack client test");
-	if(minstack_udp_init_client(mu_listen,atoi(argv[2]),argv[1]))
-	{
-		printf("We could not initialized the client test...\n");
-		return 0;
-	}
-	minstack_udp_set_external_read_function(mu_listen,listenner);
-	minstack_set_debug_level(MINSTACK_WARNING_LEVEL);
-	minstack_udp_start(mu_listen);
+	printf("starting %s on the port %d\n",argv[0],atoi(argv[1]));
+    if(argc == 3)
+        minstack_set_debug_level(atoi(argv[2]));
 	while(run)
 	{
-		minstack_udp_printf(mu_listen,"Hi server, It's %s, your best client that is talking to you %d!!!\n",argv[0],count++);
-		usleep(30*1000);
+        loop++;
+        printf("Start %d\n",loop);
+	    mu_listen = minstack_udp_start_a_server_with_read_function("The minstack server test", atoi(argv[1]), 10,listenner);
+	    if(mu_listen == NULL)
+	    {
+	        printf("We could not initialized the server test...\n");
+	        return 0;
+	    }
+	    minstack_udp_uninit(mu_listen);
+	    usleep(30*1000);
 	}
 	printf("stopping %s\n",argv[0]);
-	minstack_udp_stop(mu_listen);
-	minstack_udp_uninit(mu_listen);
 	return 0;
 }
 
 void usage(const char *appli)
 {
-	printf("%s have to be started with the address and the port number of the server\n",appli);
-	printf("example: %s \"127.0.0.1\" 10000   will start a client connected on the server 127.0.0.1:10000\n",appli);
+	printf("%s have to be started with the port number to listen too\n",appli);
+	printf("example: %s 10000    will start a server that listen on the port 10000\n",appli);
 	exit(0);
 }
 
@@ -72,8 +72,9 @@ void stop(int exit_status)
 	run = 0;
 }
 
-void listenner(int cid,char *buffer,unsigned int buffer_size_returned)
+void listenner(int cid,const char *from,char *buffer,unsigned int buffer_size_returned)
 {
-	printf("<%d>%s\n",cid,buffer);
+	if(buffer && buffer_size_returned)
+        printf("<%s:%d>%s\n",from,cid,buffer);
 }
 

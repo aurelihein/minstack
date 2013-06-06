@@ -43,6 +43,7 @@
 
 int minstack_udp_boot_server(minstack_udp *mu);
 int minstack_udp_boot_client(minstack_udp *mu);
+int minstack_udp_recvfrom_read(int cid, char *from, char **buffer);
 char *minstack_udp_default_read(int cid, unsigned int *buffer_size_returned);
 
 /**
@@ -109,7 +110,8 @@ int minstack_udp_init_server(minstack_udp *mu, int port, unsigned int max_client
     mu->new_connection_callback = minstack_default_new_connection_callback;
     mu->connection_closed_callback = minstack_default_connection_closed_server_callback;
     */
-    mu->read_socket = minstack_udp_default_read;
+    //mu->read_socket = minstack_udp_default_read;
+    mu->read_socket = minstack_udp_recvfrom_read;
     mu->external_read_socket = NULL;
 
     pthread_mutex_unlock(&mu->mutex);
@@ -163,6 +165,7 @@ int minstack_udp_start(minstack_udp *mu) {
         break;
     default:
         printerror("Unknow enum type %d\n",mu->type);
+        break;
     }
     if (!retval) {
         mu->status = STARTED;
@@ -231,7 +234,7 @@ minstack_udp *minstack_udp_start_a_server(const char *nickname, int port, int ma
  */
 minstack_udp *minstack_udp_start_a_server_with_read_function(
         const char *nickname, int port, int max_client_number, void(*function)(
-                int cid, char *buffer, unsigned int buffer_size_returned)) {
+                int cid, const char *from,char *buffer, unsigned int buffer_size_returned)) {
     int retval;
     minstack_udp *mu = minstack_udp_init(nickname);
     if (mu == NULL)
@@ -261,7 +264,7 @@ void *minstack_udp_reading_thread(void *ptr) {
     int fdmax;
     struct timeval tv;
 
-    printdebug("starting %s\n",__FUNCTION__);
+    printdebug("Starting %s\n",__FUNCTION__);
     //pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     //pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 
@@ -290,18 +293,19 @@ void *minstack_udp_reading_thread(void *ptr) {
         }
         pthread_mutex_unlock(&mu->mutex);
         if (retval > 0) {
-            char *buffer;
-            unsigned int buffer_size = 0;
+        	char from[16];
+            char *buffer=NULL;
+            unsigned int buffer_size;
             pthread_mutex_lock(&mu->mutex);
             pthread_mutex_unlock(&mu->mutex);
-            buffer = mu->read_socket(mu->listen_socket_fd, &buffer_size);
+            buffer_size = mu->read_socket(mu->listen_socket_fd,from,&buffer);
 
-            if (buffer_size == -1) {
-                printmessage("The buffer size returned is -1 is it possible ?\n");
+            if (buffer_size <= 0) {
+                printmessage("The buffer size returned is %d is it possible ?\n",buffer_size);
             } else {
-                printmessage("%s received from %d(%u)=>%s\n",mu->name, mu->listen_socket_fd,buffer_size,buffer);
+                printmessage("%s received from %s(%d):(%u)=>%s\n",mu->name, from, mu->listen_socket_fd,buffer_size,buffer);
                 if (mu->external_read_socket)
-                    mu->external_read_socket(mu->listen_socket_fd, buffer, buffer_size);
+                    mu->external_read_socket(mu->listen_socket_fd, from, buffer, buffer_size);
                 free(buffer);
             }
         }
@@ -345,7 +349,7 @@ int minstack_udp_boot_server(minstack_udp *mu) {
         return -4;
     }
 
-    listen(mu->listen_socket_fd, (int) mu->max_client_nb);
+    //listen(mu->listen_socket_fd, (int) mu->max_client_nb);
     if (pthread_create(&mu->pthread_reading_thread, NULL, minstack_udp_reading_thread, mu)) {
         printwarning("pthread_create minstack_udp_boot_server error\n");
         pthread_mutex_unlock(&mu->mutex);
@@ -427,7 +431,7 @@ int minstack_udp_stop(minstack_udp *mu) {
  * \return 0 if OK
  */
 int minstack_udp_set_external_read_function(minstack_udp *mu, void(*function)(
-        int cid, char *buffer, unsigned int buffer_size_returned)) {
+        int cid, const char *from,char *buffer, unsigned int buffer_size_returned)) {
     if (!mu || mu->type != SERVER)
         return -1;
     mu->external_read_socket = function;
@@ -451,11 +455,11 @@ int minstack_udp_write_to_server(minstack_udp *mu, char *message, int len_messag
         return -1;
     }
     if (mu->status != STARTED) {
-        printwarning("The client is not started yet \n");
+        printwarning("The client is not started yet\n");
         return -1;
     }
     if (write(mu->listen_socket_fd, message, len_message) < 0) {
-        printerror("ERROR writing to server socket %d",mu->listen_socket_fd);
+        printerror("ERROR writing to server socket [%s]:%s:%d\n",mu->name,mu->address,mu->listen_socket_fd);
         return -2;
     }
     printmessage("sent:%s length:%d to cid:%d\n",message,len_message,mu->listen_socket_fd);
@@ -502,6 +506,8 @@ void minstack_udp_printf(minstack_udp *mu, const char *msg, ...) {
         *(p - 1) = '\0';
         minstack_udp_write_to_server(mu, buffer, nb_char_written);
 }
+
+
 
 char *minstack_udp_default_read(int cid, unsigned int *buffer_size_returned) {
     int retval, finished = 0;
@@ -568,4 +574,83 @@ char *minstack_udp_default_read(int cid, unsigned int *buffer_size_returned) {
     }
     *buffer_size_returned = buffer_size;
     return buffer;
+}
+
+int minstack_udp_recvfrom_read(int cid, char *from, char **buffer) {
+	int buffer_size_returned=0;
+    int retval, finished = 0;
+    char read_buffer[DEFAULT_READ_BUFFER_SIZE] = { 0 };
+    unsigned int buffer_size = DEFAULT_READ_BUFFER_SIZE;
+    struct sockaddr_storage their_addr;
+    socklen_t addr_len;
+    char s[INET6_ADDRSTRLEN];
+
+    printdebug("there is something that is going to be read\n");
+    if (*buffer != NULL) {
+        printerror("You have to give a NULL pointer for buffer\n");
+        return -1;
+    }
+    if (from == NULL) {
+        printerror("You have to give a char tab for from\n");
+        return -2;
+    }
+    *buffer = (char *) calloc(1, buffer_size);
+
+    if (!*buffer) {
+        printerror("We could not get enough memory to allocate %d octets to read\n",sizeof(read_buffer));
+        buffer_size_returned = 0;
+        return -4;
+    }
+
+    while (!finished) {
+        //retval = read(cid,read_buffer,DEFAULT_READ_BUFFER_SIZE);
+        retval = recvfrom(cid, read_buffer, DEFAULT_READ_BUFFER_SIZE, MSG_DONTWAIT, (struct sockaddr *)&their_addr, &addr_len);
+        printdebug("recv returned %d\n",retval);
+        if (retval > 0 && retval < DEFAULT_READ_BUFFER_SIZE) {
+            memcpy(*buffer + (buffer_size - DEFAULT_READ_BUFFER_SIZE),
+                    read_buffer, DEFAULT_READ_BUFFER_SIZE);
+            finished = 1;
+        } else if (retval == DEFAULT_READ_BUFFER_SIZE) {
+            char *new_buffer;
+            memcpy(*buffer + (buffer_size - DEFAULT_READ_BUFFER_SIZE),
+                    read_buffer, DEFAULT_READ_BUFFER_SIZE);
+            new_buffer = (char *) calloc(1, buffer_size
+                    +DEFAULT_READ_BUFFER_SIZE);
+            if (!new_buffer) {
+                printmoreerror("we had a problem to read when moving buffers");
+                free(*buffer);
+                buffer_size_returned = 0;
+                return -5;
+            }
+            /*
+             new_buffer = strncpy(new_buffer,buffer,buffer_size);
+             char *p_next_char = new_buffer + buffer_size;
+             strncpy(p_next_char,read_buffer,DEFAULT_READ_BUFFER_SIZE);
+             */
+            memcpy(new_buffer, *buffer, buffer_size);
+            buffer_size += DEFAULT_READ_BUFFER_SIZE;
+            free(*buffer);
+            *buffer = new_buffer;
+            finished = 0;
+        } else if (retval < 0) {
+            //printmoreerror("we had a problem to read");
+            printdebug("we had a problem to read");
+            free(*buffer);
+            buffer_size_returned = 0;
+            return -6;
+        } else if (retval == 0) {
+            //the client just disconnected
+            if (*buffer)
+                free(*buffer);
+            buffer_size_returned = -1;
+            return -7;
+        }
+        if(retval > 0){
+        	snprintf(from,16,"%s",inet_ntop(their_addr.ss_family,
+        	            get_in_addr((struct sockaddr *)&their_addr),
+        	            s, sizeof s));
+        }
+    }
+    buffer_size_returned = buffer_size;
+    return buffer_size_returned;
 }

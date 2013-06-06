@@ -28,50 +28,42 @@ int run = 1;
 
 void usage(const char *appli);
 void stop(int exit_status);
-void listenner(int cid,char *buffer,unsigned int buffer_size_returned);
+void listenner(int cid,const char *from,char *buffer,unsigned int buffer_size_returned);
+
+int level = 0;
 
 int main (int argc, char **argv){
 	minstack_udp *mu_listen;
-	if(argc != 2)
-		usage(argv[0]);
+    if(argc < 2 || argc > 3)
+        usage(argv[0]);
 
 	signal(SIGABRT, stop);
 	signal(SIGTERM, stop);
 	signal(SIGINT, stop);
 
-	printf("starting %s on the port %d\n",argv[0],atoi(argv[1]));
-	minstack_set_debug_level(MINSTACK_DEBUG_LEVEL);
-#if 0
-	mu_listen = minstack_udp_init("The minstack UDP server test");
-	if(minstack_udp_init_server(mu_listen,atoi(argv[1]),10))
-	{
-		printf("We could not initialized the server test...\n");
-		return 0;
-	}
-	minstack_udp_set_external_read_function(mu_listen,listenner);
-	minstack_udp_start(mu_listen);
-#else
+    if(argc == 3)
+        level = atoi(argv[2]);
+
+	printf("starting %s on the port %d with the level:%d\n",argv[0],atoi(argv[1]),level);
+    minstack_set_debug_level(MINSTACK_WARNING_LEVEL);
 	mu_listen = minstack_udp_start_a_server_with_read_function("The minstack server test", atoi(argv[1]), 10,listenner);
 	if(mu_listen == NULL)
 	{
 		printf("We could not initialized the server test...\n");
 		return 0;
 	}
-#endif
 	while(run)
 		usleep(1*1000*1000);
 	printf("stopping %s\n",argv[0]);
-#if 0
-	minstack_udp_stop(mu_listen);
-#endif
 	minstack_udp_uninit(mu_listen);
 	return 0;
 }
 
 void usage(const char *appli)
 {
-	printf("%s have to be started with the port number to listen too\n",appli);
-	printf("example: %s 10000    will start a server that listen on the port 10000\n",appli);
+	printf("%s have to be started with the port number to listen too and the level of printing 0 will print everything\n",appli);
+	printf("%s [port] [print-level]\n",appli);
+	printf("example: %s 10000 5   will start a server that listen on the port 10000\n",appli);
 	exit(0);
 }
 
@@ -80,11 +72,13 @@ void stop(int exit_status)
 	run = 0;
 }
 
-void listenner(int cid,char *buffer,unsigned int buffer_size_returned)
+void listenner(int cid,const char *from,char *buffer,unsigned int buffer_size_returned)
 {
-	if(buffer && buffer_size_returned)
-	{
-	    printf("<RECV>%s\n",buffer);
-	}
+    int level_read;
+    if(buffer && buffer_size_returned)
+    {
+        if(sscanf(buffer,"[%d]",&level_read) && (level_read >= level))
+            printf("%s:%s\n",from,buffer);
+    }
 }
 

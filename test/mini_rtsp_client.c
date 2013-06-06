@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <signal.h>
 #include <tcp.h>
@@ -33,7 +34,7 @@ int listenning_port = RTSP_PORT;
 
 void usage(const char *appli);
 void stop(int exit_status);
-void listenner(int cid,char *buffer,unsigned int buffer_size_returned);
+void listenner(int cid,const char *from,char *buffer,unsigned int buffer_size_returned);
 void send_options(minstack_tcp *mt,const char *useragent,const char *ip);
 void send_describe(minstack_tcp *mt,const char *useragent,const char *ip);
 void send_play(minstack_tcp *mt,const char *useragent,const char *ip,const char *rtp_ip,int rtp_port, const char *rtp_codec);
@@ -84,7 +85,7 @@ int main (int argc, char **argv){
 void usage(const char *appli)
 {
 	printf("%s have to be started with the address of the XellIP and the IP and the port where the videosupervision is sent\n",appli);
-    printf("example: %s \"192.168.49.251\" \"192.168.49.5\" 10000 start will ask 192.168.49.251 to send the video on 192.168.49.5:10000\n",appli);
+    printf("example: %s \"192.168.49.251\" \"192.168.49.5\" 10000 play will ask 192.168.49.251 to send the video on 192.168.49.5:10000\n",appli);
     printf("example: %s \"192.168.49.251\" \"192.168.49.5\" 10000 stop will ask 192.168.49.251 to stop sending the video on 192.168.49.5:10000\n",appli);
 	exit(0);
 }
@@ -94,10 +95,10 @@ void stop(int exit_status)
 	run = 0;
 }
 
-void listenner(int cid,char *buffer,unsigned int buffer_size_returned)
+void listenner(int cid,const char *from,char *buffer,unsigned int buffer_size_returned)
 {
     printf("##########################################################\n");
-	printf("%s",buffer);
+	printf("%s:%s",from,buffer);
 	printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 	//TO BE DONE
 }

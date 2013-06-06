@@ -43,73 +43,8 @@
 int stop_thread_server_socket = 0;
 
 int minstack_tcp_delete_cid(sockets *mt, int cid);
-
-char *minstack_tcp_default_read(int cid, unsigned int *buffer_size_returned) {
-    int retval, finished = 0;
-    char read_buffer[DEFAULT_READ_BUFFER_SIZE] = { 0 };
-    unsigned int buffer_size = DEFAULT_READ_BUFFER_SIZE;
-    char *buffer;
-
-    printdebug("there is something that is going to be read\n");
-    if (!buffer_size_returned) {
-        printerror("You have to give a pointer to buffer_size_returned\n");
-        return NULL;
-    }
-    buffer = (char *) calloc(1, buffer_size);
-
-    if (!buffer) {
-        printerror("We could not get enough memory to allocate %d octets to read\n",sizeof(read_buffer));
-        *buffer_size_returned = 0;
-        return NULL;
-    }
-
-    while (!finished) {
-        //retval = read(cid,read_buffer,DEFAULT_READ_BUFFER_SIZE);
-        retval = recv(cid, read_buffer, DEFAULT_READ_BUFFER_SIZE, MSG_DONTWAIT);
-        printdebug("recv returned %d\n",retval);
-        if (retval > 0 && retval < DEFAULT_READ_BUFFER_SIZE) {
-            memcpy(buffer + (buffer_size - DEFAULT_READ_BUFFER_SIZE),
-                    read_buffer, DEFAULT_READ_BUFFER_SIZE);
-            finished = 1;
-        } else if (retval == DEFAULT_READ_BUFFER_SIZE) {
-            char *new_buffer;
-            memcpy(buffer + (buffer_size - DEFAULT_READ_BUFFER_SIZE),
-                    read_buffer, DEFAULT_READ_BUFFER_SIZE);
-            new_buffer = (char *) calloc(1, buffer_size
-                    +DEFAULT_READ_BUFFER_SIZE);
-            if (!new_buffer) {
-                printmoreerror("we had a problem to read when moving buffers");
-                free(buffer);
-                *buffer_size_returned = 0;
-                return NULL;
-            }
-            /*
-             new_buffer = strncpy(new_buffer,buffer,buffer_size);
-             char *p_next_char = new_buffer + buffer_size;
-             strncpy(p_next_char,read_buffer,DEFAULT_READ_BUFFER_SIZE);
-             */
-            memcpy(new_buffer, buffer, buffer_size);
-            buffer_size += DEFAULT_READ_BUFFER_SIZE;
-            free(buffer);
-            buffer = new_buffer;
-            finished = 0;
-        } else if (retval < 0) {
-            //printmoreerror("we had a problem to read");
-            printdebug("we had a problem to read\n");
-            free(buffer);
-            *buffer_size_returned = 0;
-            return NULL;
-        } else if (retval == 0) {
-            //the client just disconnected
-            if (buffer)
-                free(buffer);
-            *buffer_size_returned = -1;
-            return NULL;
-        }
-    }
-    *buffer_size_returned = buffer_size;
-    return buffer;
-}
+int minstack_tcp_recvfrom_read(int cid, char *from, char **buffer);
+char *minstack_tcp_default_read(int cid, unsigned int *buffer_size_returned);
 
 int minstack_default_new_connection_callback(int cid,
         struct sockaddr_in *cli_addr) {
@@ -149,8 +84,8 @@ void *minstack_tcp_reading_thread(void *ptr) {
     struct timeval tv;
 
     printdebug("starting %s\n",__FUNCTION__);
-    //pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-    //pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 
     mt->pthread_reading_thread_stop = 0;
     while (!mt->pthread_reading_thread_stop) {
@@ -201,13 +136,14 @@ void *minstack_tcp_reading_thread(void *ptr) {
         }
         pthread_mutex_unlock(&mt->mutex);
         if (socket_to_read > 0) {
-            char *buffer;
-            unsigned int buffer_size = 0;
+        	char from[16];
+            char *buffer=NULL;
+            int buffer_size = 0;
             pthread_mutex_lock(&mt->mutex);
             pthread_mutex_unlock(&mt->mutex);
-            buffer = mt->read_socket(socket_to_read, &buffer_size);
+            buffer_size = mt->read_socket(socket_to_read, from,&buffer);
 
-            if (buffer_size == -1) {
+            if (buffer_size <= 0) {
                 pthread_mutex_lock(&mt->mutex);
                 if (mt && mt->connection_closed_callback
                         && (mt->type == SERVER)) {
@@ -222,10 +158,9 @@ void *minstack_tcp_reading_thread(void *ptr) {
                     minstack_tcp_stop(mt);
                 }
             } else {
-                printmessage("%s received from %d(%u)=>%s\n",mt->name, socket_to_read,buffer_size,buffer);
+                printmessage("%s received from %s(%d):(%u)=>%s\n",mt->name,from, socket_to_read,buffer_size,buffer);
                 if (mt->external_read_socket)
-                    mt->external_read_socket(socket_to_read, buffer,
-                            buffer_size);
+                    mt->external_read_socket(socket_to_read, from, buffer, buffer_size);
                 //else
                 free(buffer);
             }
@@ -237,11 +172,14 @@ void *minstack_tcp_reading_thread(void *ptr) {
     pthread_exit(NULL);
     return NULL;
 }
-
+/*
+ * take ressources because pthread_cancel do not free the memory allocation
+ * but we have to cancel the thread because we can stay in accept wait event if we try to use a non blocked socket
+ */
 void *minstack_tcp_accept_thread(void *ptr) {
     minstack_tcp *mt = (minstack_tcp *) ptr;
-    //pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-    //pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 
     printdebug("starting %s\n",__FUNCTION__);
     while (!mt->pthread_accept_thread_stop) {
@@ -330,8 +268,7 @@ int minstack_tcp_boot_server(minstack_tcp *mt) {
         return -4;
     }
     listen(mt->listen_socket_fd, (int) mt->max_client_nb);
-    if (pthread_create(&mt->pthread_accept_thread, NULL,
-            minstack_tcp_accept_thread, mt)) {
+    if (pthread_create(&mt->pthread_accept_thread, NULL, minstack_tcp_accept_thread, mt)) {
         printwarning("pthread_create minstack_tcp_boot_server error\n");
         pthread_mutex_unlock(&mt->mutex);
         return -5;
@@ -417,6 +354,7 @@ int minstack_tcp_start(minstack_tcp *mt) {
         break;
     default:
         printerror("Unknow enum type %d\n",mt->type);
+        break;
     }
     if (!retval) {
         mt->status = STARTED;
@@ -435,6 +373,7 @@ int minstack_tcp_stop(minstack_tcp *mt) {
         printerror("Cannot stop while not started\n");
         return -1;
     }
+#ifdef NOT_CANCEL_THREAD_WHEN_STOPPING
     if (&mt->pthread_accept_thread && !mt->pthread_accept_thread_stop) {
         printdebug("The accepting thread is asked to stop\n");
         mt->pthread_accept_thread_stop = 1;
@@ -447,6 +386,22 @@ int minstack_tcp_stop(minstack_tcp *mt) {
         pthread_join(mt->pthread_reading_thread, NULL);
         printmessage("The reading thread stopped\n");
     }
+#else
+    if (&mt->pthread_accept_thread && !mt->pthread_accept_thread_stop) {
+            printdebug("The accepting thread is asked to stop\n");
+            mt->pthread_accept_thread_stop = 1;
+            if(mt->pthread_accept_thread)
+                pthread_cancel(mt->pthread_accept_thread);
+            printmessage("The accepting thread stopped\n");
+        }
+        if (&mt->pthread_reading_thread && !mt->pthread_reading_thread_stop) {
+            printdebug("The reading thread is asked to stop\n");
+            mt->pthread_reading_thread_stop = 1;
+            if(mt->pthread_reading_thread)
+                pthread_cancel(mt->pthread_reading_thread);
+            printmessage("The reading thread stopped\n");
+        }
+#endif
     if (mt->listen_socket_fd)
         minstack_close(mt->listen_socket_fd);
     pthread_mutex_destroy(&mt->mutex);
@@ -647,7 +602,8 @@ int minstack_tcp_init_server(minstack_tcp *mt, int port,
     mt->new_connection_callback = minstack_default_new_connection_callback;
     mt->connection_closed_callback
             = minstack_default_connection_closed_server_callback;
-    mt->read_socket = minstack_tcp_default_read;
+    //mt->read_socket = minstack_tcp_default_read;
+    mt->read_socket = minstack_tcp_recvfrom_read;
     mt->external_read_socket = NULL;
     pthread_mutex_unlock(&mt->mutex);
     return 0;
@@ -669,7 +625,8 @@ int minstack_tcp_init_client(minstack_tcp *mt, int port, const char *address) {
     mt->receive_loop_usleep = 100 * 1000;
     mt->new_connection_callback = NULL;
     mt->connection_closed_callback = NULL;
-    mt->read_socket = minstack_tcp_default_read;
+    //mt->read_socket = minstack_tcp_default_read;
+    mt->read_socket = minstack_tcp_recvfrom_read;
     mt->external_read_socket = NULL;
     pthread_mutex_init(&mt->mutex, NULL);
     return 0;
@@ -704,7 +661,7 @@ unsigned int minstack_tcp_get_receive_loop_usleep(minstack_tcp *mt) {
  * \return 0 if OK
  */
 int minstack_tcp_set_external_read_function(minstack_tcp *mt, void(*function)(
-        int cid, char *buffer, unsigned int buffer_size_returned)) {
+        int cid, const char *from, char *buffer, unsigned int buffer_size_returned)) {
     if (!mt || mt->type == NONE)
         return -1;
     mt->external_read_socket = function;
@@ -723,14 +680,19 @@ minstack_tcp *minstack_tcp_start_a_client(const char *nickname, int port,
     int retval;
     minstack_tcp *mt = minstack_tcp_init(nickname);
     if (mt == NULL)
+    {
+        printerror("Cannot init a minstack TCP\n");
         return NULL;
+    }
     retval = minstack_tcp_init_client(mt, port, address);
     if (retval) {
+        printerror("Cannot init TCP client\n");
         minstack_tcp_uninit(mt);
         return NULL;
     }
     retval = minstack_tcp_start(mt);
     if (retval) {
+        printerror("Cannot start TCP client\n");
         minstack_tcp_uninit(mt);
         return NULL;
     }
@@ -749,14 +711,19 @@ minstack_tcp *minstack_tcp_start_a_server(const char *nickname, int port,
     int retval;
     minstack_tcp *mt = minstack_tcp_init(nickname);
     if (mt == NULL)
+    {
+        printerror("Cannot init a minstack TCP\n");
         return NULL;
+    }
     retval = minstack_tcp_init_server(mt, port, max_client_number);
     if (retval) {
+        printerror("Cannot init TCP server\n");
         minstack_tcp_uninit(mt);
         return NULL;
     }
     retval = minstack_tcp_start(mt);
     if (retval) {
+        printerror("Cannot start TCP server\n");
         minstack_tcp_uninit(mt);
         return NULL;
     }
@@ -773,7 +740,7 @@ minstack_tcp *minstack_tcp_start_a_server(const char *nickname, int port,
  */
 minstack_tcp *minstack_tcp_start_a_server_with_read_function(
         const char *nickname, int port, int max_client_number, void(*function)(
-                int cid, char *buffer, unsigned int buffer_size_returned)) {
+                int cid, const char *from, char *buffer, unsigned int buffer_size_returned)) {
     int retval;
     minstack_tcp *mt = minstack_tcp_init(nickname);
     if (mt == NULL)
@@ -794,5 +761,155 @@ minstack_tcp *minstack_tcp_start_a_server_with_read_function(
         return NULL;
     }
     return mt;
+}
+
+int minstack_tcp_recvfrom_read(int cid, char *from, char **buffer) {
+	int buffer_size_returned=0;
+    int retval, finished = 0;
+    char read_buffer[DEFAULT_READ_BUFFER_SIZE] = { 0 };
+    unsigned int buffer_size = DEFAULT_READ_BUFFER_SIZE;
+    struct sockaddr_storage their_addr;
+    socklen_t addr_len;
+    char s[INET6_ADDRSTRLEN];
+
+    printdebug("There is something that is going to be read\n");
+    if (*buffer != NULL) {
+    	printerror("You have to give a NULL pointer for buffer\n");
+    	return -1;
+    }
+    if (from == NULL) {
+        printerror("You have to give a char tab for from\n");
+        return -2;
+    }
+    *buffer = (char *) calloc(1, buffer_size);
+    if (!*buffer) {
+        printerror("We could not get enough memory to allocate %d octets to read\n",sizeof(read_buffer));
+        buffer_size_returned = 0;
+        return -4;
+    }
+
+    while (!finished) {
+    	int ret_getpeername=0;
+        //retval = read(cid,read_buffer,DEFAULT_READ_BUFFER_SIZE);
+        retval = recv(cid, read_buffer, DEFAULT_READ_BUFFER_SIZE, MSG_DONTWAIT);
+        printdebug("recv returned %d\n",retval);
+        addr_len = sizeof(their_addr);
+        ret_getpeername = getpeername(cid, (struct sockaddr *)&their_addr, &addr_len);
+        printdebug("getpeername returned %d:%s\n",ret_getpeername,strerror(errno));
+        if (retval > 0 && retval < DEFAULT_READ_BUFFER_SIZE) {
+            memcpy(*buffer + (buffer_size - DEFAULT_READ_BUFFER_SIZE),
+                    read_buffer, DEFAULT_READ_BUFFER_SIZE);
+            finished = 1;
+        } else if (retval == DEFAULT_READ_BUFFER_SIZE) {
+            char *new_buffer;
+            memcpy(*buffer + (buffer_size - DEFAULT_READ_BUFFER_SIZE),
+                    read_buffer, DEFAULT_READ_BUFFER_SIZE);
+            new_buffer = (char *) calloc(1, buffer_size
+                    +DEFAULT_READ_BUFFER_SIZE);
+            if (!new_buffer) {
+                printmoreerror("we had a problem to read when moving buffers");
+                free(*buffer);
+                buffer_size_returned = 0;
+                return -5;
+            }
+            /*
+             new_buffer = strncpy(new_buffer,buffer,buffer_size);
+             char *p_next_char = new_buffer + buffer_size;
+             strncpy(p_next_char,read_buffer,DEFAULT_READ_BUFFER_SIZE);
+             */
+            memcpy(new_buffer, *buffer, buffer_size);
+            buffer_size += DEFAULT_READ_BUFFER_SIZE;
+            free(*buffer);
+            *buffer = new_buffer;
+            finished = 0;
+        } else if (retval < 0) {
+            //printmoreerror("we had a problem to read");
+            printdebug("we had a problem to read\n");
+            free(*buffer);
+            buffer_size_returned = 0;
+            return buffer_size_returned;
+        } else if (retval == 0) {
+            //the client just disconnected
+            if (*buffer)
+                free(*buffer);
+            buffer_size_returned = -1;
+            return buffer_size_returned;
+        }
+        if(retval > 0){
+        	snprintf(from,16,"%s",inet_ntop(their_addr.ss_family,
+        	            get_in_addr((struct sockaddr *)&their_addr),
+        	            s, sizeof s));
+        	printdebug("Get datas from %s\n",from);
+        }
+    }
+    buffer_size_returned = buffer_size;
+    return buffer_size_returned;
+}
+
+char *minstack_tcp_default_read(int cid, unsigned int *buffer_size_returned) {
+    int retval, finished = 0;
+    char read_buffer[DEFAULT_READ_BUFFER_SIZE] = { 0 };
+    unsigned int buffer_size = DEFAULT_READ_BUFFER_SIZE;
+    char *buffer;
+
+    printdebug("There is something that is going to be read\n");
+    if (!buffer_size_returned) {
+        printerror("You have to give a pointer to buffer_size_returned\n");
+        return NULL;
+    }
+    buffer = (char *) calloc(1, buffer_size);
+
+    if (!buffer) {
+        printerror("We could not get enough memory to allocate %d octets to read\n",sizeof(read_buffer));
+        *buffer_size_returned = 0;
+        return NULL;
+    }
+
+    while (!finished) {
+        //retval = read(cid,read_buffer,DEFAULT_READ_BUFFER_SIZE);
+        retval = recv(cid, read_buffer, DEFAULT_READ_BUFFER_SIZE, MSG_DONTWAIT);
+        printdebug("recv returned %d\n",retval);
+        if (retval > 0 && retval < DEFAULT_READ_BUFFER_SIZE) {
+            memcpy(buffer + (buffer_size - DEFAULT_READ_BUFFER_SIZE),
+                    read_buffer, DEFAULT_READ_BUFFER_SIZE);
+            finished = 1;
+        } else if (retval == DEFAULT_READ_BUFFER_SIZE) {
+            char *new_buffer;
+            memcpy(buffer + (buffer_size - DEFAULT_READ_BUFFER_SIZE),
+                    read_buffer, DEFAULT_READ_BUFFER_SIZE);
+            new_buffer = (char *) calloc(1, buffer_size
+                    +DEFAULT_READ_BUFFER_SIZE);
+            if (!new_buffer) {
+                printmoreerror("we had a problem to read when moving buffers");
+                free(buffer);
+                *buffer_size_returned = 0;
+                return NULL;
+            }
+            /*
+             new_buffer = strncpy(new_buffer,buffer,buffer_size);
+             char *p_next_char = new_buffer + buffer_size;
+             strncpy(p_next_char,read_buffer,DEFAULT_READ_BUFFER_SIZE);
+             */
+            memcpy(new_buffer, buffer, buffer_size);
+            buffer_size += DEFAULT_READ_BUFFER_SIZE;
+            free(buffer);
+            buffer = new_buffer;
+            finished = 0;
+        } else if (retval < 0) {
+            //printmoreerror("we had a problem to read");
+            printdebug("we had a problem to read\n");
+            free(buffer);
+            *buffer_size_returned = 0;
+            return NULL;
+        } else if (retval == 0) {
+            //the client just disconnected
+            if (buffer)
+                free(buffer);
+            *buffer_size_returned = -1;
+            return NULL;
+        }
+    }
+    *buffer_size_returned = buffer_size;
+    return buffer;
 }
 

@@ -28,11 +28,11 @@ int run = 1;
 
 void usage(const char *appli);
 void stop(int exit_status);
-void listenner(int cid,char *buffer,unsigned int buffer_size_returned);
+void listenner(int cid,const char *from, char *buffer,unsigned int buffer_size_returned);
 
 int main (int argc, char **argv){
 	minstack_tcp *mt_listen;
-	if(argc != 2)
+	if(argc < 2 || argc > 3)
 		usage(argv[0]);
 
 	signal(SIGABRT, stop);
@@ -40,7 +40,8 @@ int main (int argc, char **argv){
 	signal(SIGINT, stop);
 
 	printf("starting %s on the port %d\n",argv[0],atoi(argv[1]));
-	minstack_set_debug_level(MINSTACK_DEBUG_LEVEL);
+	if(argc == 3)
+	    minstack_set_debug_level(atoi(argv[2]));
 #if 0
 	mt_listen = minstack_tcp_init("The minstack server test");
 	if(minstack_tcp_init_server(mt_listen,atoi(argv[1]),10))
@@ -70,8 +71,8 @@ int main (int argc, char **argv){
 
 void usage(const char *appli)
 {
-	printf("%s have to be started with the port number to listen too\n",appli);
-	printf("example: %s 10000    will start a server that listen on the port 10000\n",appli);
+	printf("%s have to be started with the port number to listen to\n",appli);
+	printf("example: %s 10000 (debug_level)   will start a server that listen on the port 10000 with the debug level in option\n",appli);
 	exit(0);
 }
 
@@ -80,9 +81,9 @@ void stop(int exit_status)
 	run = 0;
 }
 
-void listenner(int cid,char *buffer,unsigned int buffer_size_returned)
+void listenner(int cid,const char *from, char *buffer,unsigned int buffer_size_returned)
 {
 	if(buffer && buffer_size_returned)
-		printf("<%d>%s\n",cid,buffer);
+		printf("<%s:%d>%s\n",from,cid,buffer);
 }
 

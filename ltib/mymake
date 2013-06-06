@@ -1,7 +1,0 @@
-NAME_BUILD_DIR='minstack'
-APPLI='minstack'
-AUTOCONF='autogen'
-
-. `pwd`/../common_GIP/common.sh
-exit
- 
