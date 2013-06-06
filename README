@@ -17,13 +17,13 @@
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.*
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-Project		: minstack - A minimal stack for UDP and/or TCP transactions
+Project		: minstack - A minimal library for UDP and/or TCP transactions
 Email		: a_bouin@yahoo.fr
 License		: GPLv3
 Home Page	: ...
 
 minstack is a GPL v3 library that help the implentation of UDP/TCP transactions.
-It aims to implement a minimal stack with a very simple high layer API.
+It aims to implement a minimal library with a very simple high layer API.
 
 Features :
 ----------
