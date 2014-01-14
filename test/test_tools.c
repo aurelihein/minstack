@@ -21,46 +21,66 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
-#include <tcp.h>
-#include <minstack_debug.h>
+#include "tcp.h"
+#include "minstack_debug.h"
+#include "tools.h"
+
 int run = 1;
 
 void usage(const char *appli);
 void stop(int exit_status);
-void listenner(int cid,const char *from, char *buffer,unsigned int buffer_size_returned);
 
 int main (int argc, char **argv){
-	minstack_tcp *mt_listen;
+	MinstackList *ml=NULL;
+	/*
 	if(argc != 4)
 		usage(argv[0]);
-
+	*/
 	signal(SIGABRT, stop);
 	signal(SIGTERM, stop);
 	signal(SIGINT, stop);
 
-	printf("starting %s on the address %s port %d\n",argv[0],argv[1],atoi(argv[2]));
-	mt_listen = minstack_tcp_init("The minstack client test");
-	if(minstack_tcp_init_client(mt_listen,atoi(argv[2]),argv[1]))
-	{
-		printf("We could not initialized the client test...\n");
-		return 0;
-	}
-	minstack_tcp_set_external_read_function(mt_listen,listenner);
-	minstack_set_debug_level(MINSTACK_WARNING_LEVEL);
-	minstack_tcp_start(mt_listen);
-	usleep(100*1000);
-	minstack_tcp_printf(mt_listen,"%s",argv[3]);
-    usleep(2*1000*1000);
-	printf("stopping %s\n",argv[0]);
-	minstack_tcp_stop(mt_listen);
-	minstack_tcp_uninit(mt_listen);
+	printf("Starting %s\n",argv[0]);
+
+	minstack_add_message_into_last_position_of_list(&ml,"AUREL:hello world!!");
+	minstack_add_message_into_last_position_of_list(&ml,"WORLD:Hello little guy!!");
+	minstack_add_message_into_last_position_of_list(&ml,"AUREL:How are you ?");
+	minstack_add_message_into_last_position_of_list(&ml,"WORLD:I am OK apart that human being are killing me !!");
+	minstack_add_message_into_last_position_of_list(&ml,"AUREL:Are you talking about pollution ??");
+	minstack_add_message_into_last_position_of_list(&ml,"WORLD:Yes I do ...!!");
+	minstack_add_message_into_last_position_of_list(&ml,"AUREL:archhh ...");
+	minstack_add_message_into_first_position_of_list(&ml,"Dialog Part I");
+
+	printf("Message number:%d\n",minstack_get_number_of_messages_in_list(&ml));
+	printf("Show all messages:\n");
+	minstack_show_message_list(ml);
+
+	char *ptr = minstack_pop_first_message_from_list(&ml);
+	printf("The First message was %s\n",ptr);
+	free(ptr);
+
+	char *ptr2 = minstack_pop_last_message_from_list(&ml);
+	printf("The Last message was %s\n",ptr2);
+	free(ptr2);
+
+
+	printf("Show all messages again:\n");
+	minstack_show_message_list(ml);
+
+
+	minstack_message_list_free(&ml);
+
+	printf("Message number after free:%d\n",minstack_get_number_of_messages_in_list(&ml));
+
+	printf("Ending %s\n",argv[0]);
+
 	return 0;
 }
 
 void usage(const char *appli)
 {
 	printf("%s have to be started with the address and the port number of the server and the string to send\n",appli);
-	printf("example: %s \"127.0.0.1\" 10000 \"status\"   will start a client connected on the server 127.0.0.1:10000 and send the string status\n",appli);
+	printf("example: %s \"127.0.0.1\" 10000 \"status\"   will start a client connected on the server 127.0.0.1:10000 ans wend the string status\n",appli);
 	exit(0);
 }
 
@@ -68,9 +88,3 @@ void stop(int exit_status)
 {
 	run = 0;
 }
-
-void listenner(int cid,const char *from, char *buffer,unsigned int buffer_size_returned)
-{
-	printf("<RECV>%s:%s\n",from, buffer);
-}
-

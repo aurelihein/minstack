@@ -104,17 +104,15 @@ void rtsp_listenner(int cid,const char *from, char *buffer,unsigned int buffer_s
 
     if(!strcmp("OPTIONS",method))
     {
-        int ret;
         char answer[1024];
         retval = snprintf(answer,sizeof(answer),"%s 200 OK\r\nCSeq: %d\r\nPublic: DESCRIBE, PLAY, TEARDOWN\r\n\r\n",version,cseq_read);
-        ret =write(cid,answer,retval);
+        write(cid,answer,retval);
     }
     else if(!strcmp("DESCRIBE",method))
     {
-        int ret;
         char answer[1024];
         retval = snprintf(answer,sizeof(answer),"%s 200 OK\r\nCSeq: %d\r\nCamera: %d\r\nCodecs: %s\r\n\r\n",version,cseq_read,handle_camera,"H264");
-        ret = write(cid,answer,retval);
+        write(cid,answer,retval);
     }
     else if(!strcmp("PLAY",method))
     {

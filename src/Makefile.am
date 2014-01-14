@@ -3,6 +3,9 @@
 lib_LTLIBRARIES = libminstack.la
 
 libminstack_la_SOURCES= \
+	list.c \
+	list.h \
+	tools.c \
 	private.c \
 	private.h \
 	tcp.c \

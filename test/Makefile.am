@@ -19,7 +19,8 @@ bin_PROGRAMS =  \
 	minstack_udp_client_load_test \
 	minstack_udp_client_multiple_test \
 	mini_rtsp_server \
-	mini_rtsp_client
+	mini_rtsp_client \
+	test_tools
 	
 minstack_tcp_server_level_SOURCES= minstack_tcp_server_level.c
 	
