@@ -507,8 +507,6 @@ void minstack_udp_printf(minstack_udp *mu, const char *msg, ...) {
         minstack_udp_write_to_server(mu, buffer, nb_char_written);
 }
 
-
-
 char *minstack_udp_default_read(int cid, unsigned int *buffer_size_returned) {
     int retval, finished = 0;
     char read_buffer[DEFAULT_READ_BUFFER_SIZE] = { 0 };
@@ -585,7 +583,7 @@ int minstack_udp_recvfrom_read(int cid, char *from, char **buffer) {
     socklen_t addr_len;
     char s[INET6_ADDRSTRLEN];
 
-    printdebug("there is something that is going to be read\n");
+    printdebug("There is something to read\n");
     if (*buffer != NULL) {
         printerror("You have to give a NULL pointer for buffer\n");
         return -1;
