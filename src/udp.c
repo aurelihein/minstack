@@ -607,10 +607,12 @@ int minstack_udp_recvfrom_read(int cid, char *from, char **buffer) {
         retval = recvfrom(cid, read_buffer, DEFAULT_READ_BUFFER_SIZE, MSG_DONTWAIT, (struct sockaddr *)&their_addr, &addr_len);
         printdebug("recv returned %d\n",retval);
         if (retval > 0 && retval < DEFAULT_READ_BUFFER_SIZE) {
+        	//All the buffer has been copied
             memcpy(*buffer + (buffer_size - DEFAULT_READ_BUFFER_SIZE),
                     read_buffer, DEFAULT_READ_BUFFER_SIZE);
             finished = 1;
         } else if (retval == DEFAULT_READ_BUFFER_SIZE) {
+        	//There is a small part of the buffer copied, and it is not finished
             char *new_buffer;
             memcpy(*buffer + (buffer_size - DEFAULT_READ_BUFFER_SIZE),
                     read_buffer, DEFAULT_READ_BUFFER_SIZE);

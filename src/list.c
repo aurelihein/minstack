@@ -152,7 +152,7 @@ void * minstack_list_nth_data(const MinstackList *list, int index){
 void * minstack_list_nth2_data(const MinstackList *list, int index){
 	int i;
 	for(i=0;list!=NULL;list=list->next,++i){
-		if (i==index) return list;
+		if (i==index) return (void *)list;
 	}
 	printerror("minstack_list_nth_data: no such index in list.");
 	return NULL;

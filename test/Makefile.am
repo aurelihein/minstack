@@ -20,6 +20,7 @@ bin_PROGRAMS =  \
 	minstack_udp_client_multiple_test \
 	mini_rtsp_server \
 	mini_rtsp_client \
+	minstack_udp_proxy \
 	test_tools
 	
 minstack_tcp_server_level_SOURCES= minstack_tcp_server_level.c
@@ -51,6 +52,8 @@ minstack_udp_client_test_SOURCES= minstack_udp_client_test.c
 minstack_udp_client_load_test_SOURCES= minstack_udp_client_load_test.c
 
 minstack_udp_client_multiple_test_SOURCES= minstack_udp_client_multiple_test.c
+
+minstack_udp_proxy_SOURCES= minstack_udp_proxy.c
 
 AM_LDFLAGS=	$(top_builddir)/src/libminstack.la -lpthread
 endif
