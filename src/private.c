@@ -62,12 +62,13 @@ const char *get_in_addr_char(struct sockaddr_storage *their_addr){
 #else
     if(sa->sa_family == AF_INET){
     	in_addr = &(((struct sockaddr_in*)sa)->sin_addr);
-    }else{
-    	in_addr = &(((struct sockaddr_in6*)sa)->sin6_addr);
-    }
 	returned = win32_inet_ntop(their_addr->ss_family, in_addr, s, sizeof s);
+    }else{
+	//TO BE HANDLED
+    	//in_addr = &(((struct sockaddr_in6*)sa)->sin6_addr);
+	returned = "";
+    }
 #endif
-
 	return returned;
 }
 
