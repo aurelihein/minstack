@@ -130,7 +130,8 @@ char *minstack_pop_first_message_from_list(MinstackList **ml){
 }
 
 void minstack_print_message(void *message){
-	printf("%s\n",(char *)message);
+	char *char_message = message;
+	printf("%s\n",char_message);
 }
 
 int minstack_show_message_list(MinstackList *ml){

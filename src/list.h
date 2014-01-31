@@ -40,6 +40,7 @@ int minstack_list_index(const MinstackList *list, void *data);
 MinstackList * minstack_list_insert_sorted(MinstackList *list, void *data, int (*compare_func)(const void *, const void*));
 MinstackList * minstack_list_insert(MinstackList *list, MinstackList *before, void *data);
 MinstackList * minstack_list_copy(const MinstackList *list);
+void * minstack_list_nth2_data(const MinstackList *list, int index);
 
 #define minstack_list_next(elem) ((elem)->next)
 

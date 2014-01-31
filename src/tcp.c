@@ -296,7 +296,7 @@ int minstack_tcp_boot_client(minstack_tcp *mt) {
     }
     server = gethostbyname(mt->address);
     if (server == NULL) {
-        fprintf(stderr, "ERROR, no such host\n");
+        fprintf(stderr, "ERROR, no such host :%s\n",mt->address);
         return -3;
     }
     memset((char *) &serv_addr, 0, sizeof(serv_addr));
@@ -390,14 +390,16 @@ int minstack_tcp_stop(minstack_tcp *mt) {
     if (&mt->pthread_accept_thread && !mt->pthread_accept_thread_stop) {
             printdebug("The accepting thread is asked to stop\n");
             mt->pthread_accept_thread_stop = 1;
-            if(mt->pthread_accept_thread)
+            //Check if & or not after
+            if(&mt->pthread_accept_thread)
                 pthread_cancel(mt->pthread_accept_thread);
             printmessage("The accepting thread stopped\n");
         }
         if (&mt->pthread_reading_thread && !mt->pthread_reading_thread_stop) {
             printdebug("The reading thread is asked to stop\n");
             mt->pthread_reading_thread_stop = 1;
-            if(mt->pthread_reading_thread)
+            //Check if & or not after
+            if(&mt->pthread_reading_thread)
                 pthread_cancel(mt->pthread_reading_thread);
             printmessage("The reading thread stopped\n");
         }
@@ -770,7 +772,6 @@ int minstack_tcp_recvfrom_read(int cid, char *from, char **buffer) {
     unsigned int buffer_size = DEFAULT_READ_BUFFER_SIZE;
     struct sockaddr_storage their_addr;
     socklen_t addr_len;
-    char s[INET6_ADDRSTRLEN];
 
     printdebug("There is something that is going to be read\n");
     if (*buffer != NULL) {
@@ -836,9 +837,7 @@ int minstack_tcp_recvfrom_read(int cid, char *from, char **buffer) {
             return buffer_size_returned;
         }
         if(retval > 0){
-        	snprintf(from,16,"%s",inet_ntop(their_addr.ss_family,
-        	            get_in_addr((struct sockaddr *)&their_addr),
-        	            s, sizeof s));
+        	snprintf(from,16,"%s",get_in_addr_char(&their_addr));
         	printdebug("Get datas from %s\n",from);
         }
     }

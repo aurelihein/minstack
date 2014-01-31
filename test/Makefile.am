@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-INCLUDES = -I$(top_srcdir)/include
+AM_CPPFLAGS = -I$(top_srcdir)/include
 
 if BUILD_TEST
 
@@ -55,5 +55,5 @@ minstack_udp_client_multiple_test_SOURCES= minstack_udp_client_multiple_test.c
 
 minstack_udp_proxy_SOURCES= minstack_udp_proxy.c
 
-AM_LDFLAGS=	$(top_builddir)/src/libminstack.la -lpthread
+AM_LDFLAGS=	$(top_builddir)/src/libminstack.la -lpthread -pthread
 endif

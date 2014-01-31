@@ -99,7 +99,7 @@ struct minstack_udp_struct {
     int pthread_reading_thread_stop;
 };
 
-void *get_in_addr(struct sockaddr *sa);
+const char *get_in_addr_char(struct sockaddr_storage *their_addr);
 
 #ifdef WIN32
 int win32_init_socket_api(void);

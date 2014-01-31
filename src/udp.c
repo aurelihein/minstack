@@ -581,7 +581,6 @@ int minstack_udp_recvfrom_read(int cid, char *from, char **buffer) {
     unsigned int buffer_size = DEFAULT_READ_BUFFER_SIZE;
     struct sockaddr_storage their_addr;
     socklen_t addr_len;
-    char s[INET6_ADDRSTRLEN];
 
     printdebug("There is something to read\n");
     if (*buffer != NULL) {
@@ -646,9 +645,7 @@ int minstack_udp_recvfrom_read(int cid, char *from, char **buffer) {
             return -7;
         }
         if(retval > 0){
-        	snprintf(from,16,"%s",inet_ntop(their_addr.ss_family,
-        	            get_in_addr((struct sockaddr *)&their_addr),
-        	            s, sizeof s));
+        	snprintf(from,16,"%s",get_in_addr_char(&their_addr));
         }
     }
     buffer_size_returned = buffer_size;
