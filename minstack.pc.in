@@ -6,5 +6,5 @@ includedir=@includedir@
 Name: minstack
 Description: A minimal stack for UDP/TCP transaction
 Version: @VERSION@
-Libs: -L${libdir} -lminstack
+Libs: -L${libdir} -lminstack -lpthread -pthread
 Cflags:  -I${includedir}
