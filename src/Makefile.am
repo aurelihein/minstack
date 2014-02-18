@@ -14,7 +14,7 @@ libminstack_la_SOURCES= \
 
 libminstack_la_CPPFLAGS= -D_GNU_SOURCE
 libminstack_la_CFLAGS= -Wall -I$(top_srcdir)/include $(CONFIG_CFLAGS)
-#libminstack_la_LDFLAGS= -version-info $(VERSION_INFO)
+libminstack_la_LDFLAGS= -release ${VERSION}
 
 INCLUDE = -I$(top_srcdir)/include
 AM_CFLAGS=$(STRICT_OPTIONS) $(CONFIG_CFLAGS)

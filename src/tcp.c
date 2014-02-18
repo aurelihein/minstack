@@ -427,7 +427,11 @@ int minstack_tcp_write(minstack_tcp *mt, int cid, char *message, int len_message
     }
     //if (write(cid, message, len_message) < 0) {
     if(send(cid, message, len_message,0) < 0){
+#ifdef WIN32
+    	printerror("ERROR writing to socket %d with erro :%d\n",cid,WSAGetLastError());
+#else
         printerror("ERROR writing to socket %d\n",cid);
+#endif
         return -1;
     }
     printmessage("%s sent:%s length:%d to cid:%d\n",mt->name,message,len_message,cid);
