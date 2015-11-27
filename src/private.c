@@ -50,26 +50,36 @@ const char* win32_inet_ntop(int af, const void* src, char* dst, int cnt){
 #endif
 
 // get const char * of sockaddr, IPv4 or IPv6:
-const char *get_in_addr_char(struct sockaddr_storage *their_addr){
-    char s[INET6_ADDRSTRLEN];
+int get_in_addr_char(struct sockaddr_storage *their_addr, char *char_ip, int char_ip_size, int *port){
     void *in_addr;
-    const char * returned="";
     struct sockaddr *sa = (struct sockaddr *)their_addr;
 
+    if(!char_ip || !port){
+        fprintf(stderr,"%s missing pointer\n",__func__);
+        return -1;
+    }
+
 #ifndef WIN32
-    in_addr = (sa->sa_family == AF_INET)?&(((struct sockaddr_in*)sa)->sin_addr):&(((struct sockaddr_in6*)sa)->sin6_addr);
-	returned = inet_ntop(their_addr->ss_family, in_addr, s, sizeof s);
+    if(sa->sa_family == AF_INET){
+        in_addr = &(((struct sockaddr_in*)sa)->sin_addr);
+        *port = (((struct sockaddr_in*)sa)->sin_port);
+    }else{
+        in_addr = &(((struct sockaddr_in6*)sa)->sin6_addr);
+        *port = (((struct sockaddr_in6*)sa)->sin6_port);
+    }
+    inet_ntop(their_addr->ss_family, in_addr,char_ip, sizeof(char_ip_size));
 #else
     if(sa->sa_family == AF_INET){
     	in_addr = &(((struct sockaddr_in*)sa)->sin_addr);
-	returned = win32_inet_ntop(their_addr->ss_family, in_addr, s, sizeof s);
+        *port = (((struct sockaddr_in*)sa)->sin_port);
+	win32_inet_ntop(their_addr->ss_family, in_addr, char_ip, sizeof(char_ip_size));
     }else{
 	//TO BE HANDLED
     	//in_addr = &(((struct sockaddr_in6*)sa)->sin6_addr);
-	returned = "";
+	return -2;
     }
 #endif
-	return returned;
+    return 0;
 }
 
 #ifdef WIN32

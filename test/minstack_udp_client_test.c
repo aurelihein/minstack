@@ -27,7 +27,7 @@ int run = 1;
 
 void usage(const char *appli);
 void stop(int exit_status);
-void listenner(int cid,const char *from,char *buffer,unsigned int buffer_size_returned);
+void listenner(int cid,char *from,int from_size, int *port, char *buffer,unsigned int buffer_size_returned);
 
 int main (int argc, char **argv){
 	minstack_udp *mu_listen;
@@ -50,6 +50,7 @@ int main (int argc, char **argv){
 	minstack_udp_start(mu_listen);
 	usleep(100*1000);
 	minstack_udp_printf(mu_listen,"%s",argv[3]);
+	usleep(5*1000*1000);
 	printf("Stopping %s\n",argv[0]);
 	minstack_udp_stop(mu_listen);
 	minstack_udp_uninit(mu_listen);
@@ -69,8 +70,8 @@ void stop(int exit_status)
 	run = 0;
 }
 
-void listenner(int cid,const char *from, char *buffer,unsigned int buffer_size_returned)
+void listenner(int cid,char *from,int from_size, int *port, char *buffer,unsigned int buffer_size_returned)
 {
-	printf("<RECV>%s:%s\n",from,buffer);
+	printf("<RECV>%s[%d]:%s\n",from,*port,buffer);
 }
 

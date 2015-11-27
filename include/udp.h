@@ -39,8 +39,8 @@ minstack_udp *minstack_udp_start_a_server(const char *nickname, int port, int ma
 int minstack_udp_init_server(minstack_udp *mu, int port,unsigned int max_client_number);
 minstack_udp *minstack_udp_start_a_server_with_read_function(
         const char *nickname, int port, int max_client_number, void(*function)(
-                int cid, const char *from,char *buffer, unsigned int buffer_size_returned));
-int minstack_udp_set_external_read_function(minstack_udp *mu, void(*function)(int cid, const char *from,char *buffer, unsigned int buffer_size_returned)) ;
+                int cid, char *from,int from_size,int *port,char *buffer, unsigned int buffer_size_returned));
+int minstack_udp_set_external_read_function(minstack_udp *mu, void(*function)(int cid, char *from,int from_size,int *port, char *buffer,unsigned int buffer_size_returned));
 int minstack_udp_start(minstack_udp *mu);
 int minstack_udp_stop(minstack_udp *mu);
 int minstack_udp_write(minstack_udp *mu, char *message, int len_message);

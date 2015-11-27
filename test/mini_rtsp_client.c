@@ -34,7 +34,7 @@ int listenning_port = RTSP_PORT;
 
 void usage(const char *appli);
 void stop(int exit_status);
-void listenner(int cid,const char *from,char *buffer,unsigned int buffer_size_returned);
+void listenner(int cid,char *from,int from_size, int *port, char *buffer,unsigned int buffer_size_returned);
 void send_options(minstack_tcp *mt,const char *useragent,const char *ip);
 void send_describe(minstack_tcp *mt,const char *useragent,const char *ip);
 void send_play(minstack_tcp *mt,const char *useragent,const char *ip,const char *rtp_ip,int rtp_port, const char *rtp_codec);
@@ -95,7 +95,7 @@ void stop(int exit_status)
 	run = 0;
 }
 
-void listenner(int cid,const char *from,char *buffer,unsigned int buffer_size_returned)
+void listenner(int cid,char *from,int from_size, int *port, char *buffer,unsigned int buffer_size_returned)
 {
     printf("##########################################################\n");
 	printf("%s:%s",from,buffer);

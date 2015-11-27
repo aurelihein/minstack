@@ -1,1 +1,4 @@
-add plugins to get more sophisticate stack
+Add the possibility to a server to send message to its client
+(For the moment just the client can send/receive messages)
+Add plugins to get more sophisticate stack
+

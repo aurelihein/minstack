@@ -43,7 +43,7 @@
 
 int minstack_udp_boot_server(minstack_udp *mu);
 int minstack_udp_boot_client(minstack_udp *mu);
-int minstack_udp_recvfrom_read(int cid, char *from, char **buffer);
+int minstack_udp_recvfrom_read(int cid, char *from, int from_size, int *port, char **buffer);
 char *minstack_udp_default_read(int cid, unsigned int *buffer_size_returned);
 
 /**
@@ -110,7 +110,6 @@ int minstack_udp_init_server(minstack_udp *mu, int port, unsigned int max_client
     mu->new_connection_callback = minstack_default_new_connection_callback;
     mu->connection_closed_callback = minstack_default_connection_closed_server_callback;
     */
-    //mu->read_socket = minstack_udp_default_read;
     mu->read_socket = minstack_udp_recvfrom_read;
     mu->external_read_socket = NULL;
 
@@ -128,6 +127,8 @@ int minstack_udp_init_server(minstack_udp *mu, int port, unsigned int max_client
 int minstack_udp_init_client(minstack_udp *mu, int port, const char *address) {
     if (!mu || mu->type != NONE)
         return -1;
+    pthread_mutex_init(&mu->mutex, NULL);
+    pthread_mutex_lock(&mu->mutex);
     mu->type = CLIENT;
     mu->port = port;
     mu->address = address;
@@ -135,10 +136,11 @@ int minstack_udp_init_client(minstack_udp *mu, int port, const char *address) {
     /*
     mu->new_connection_callback = NULL;
     mu->connection_closed_callback = NULL;
-    mu->read_socket = minstack_udp_default_read;
-    mu->external_read_socket = NULL;
     */
-    pthread_mutex_init(&mu->mutex, NULL);
+    mu->read_socket = minstack_udp_recvfrom_read;
+    mu->external_read_socket = NULL;
+
+    pthread_mutex_unlock(&mu->mutex);
     return 0;
 }
 
@@ -234,7 +236,7 @@ minstack_udp *minstack_udp_start_a_server(const char *nickname, int port, int ma
  */
 minstack_udp *minstack_udp_start_a_server_with_read_function(
         const char *nickname, int port, int max_client_number, void(*function)(
-                int cid, const char *from,char *buffer, unsigned int buffer_size_returned)) {
+                int cid, char *from,int from_size,int *port,char *buffer, unsigned int buffer_size_returned)) {
     int retval;
     minstack_udp *mu = minstack_udp_init(nickname);
     if (mu == NULL)
@@ -293,19 +295,20 @@ void *minstack_udp_reading_thread(void *ptr) {
         }
         pthread_mutex_unlock(&mu->mutex);
         if (retval > 0) {
-        	char from[16];
+            char distant_ip_addr[16]={0};
+            int distant_port=0;
             char *buffer=NULL;
             unsigned int buffer_size;
             pthread_mutex_lock(&mu->mutex);
             pthread_mutex_unlock(&mu->mutex);
-            buffer_size = mu->read_socket(mu->listen_socket_fd,from,&buffer);
+            buffer_size = mu->read_socket(mu->listen_socket_fd,distant_ip_addr,sizeof(distant_ip_addr),&distant_port,&buffer);
 
             if (buffer_size <= 0) {
                 printmessage("The buffer size returned is %d is it possible ?\n",buffer_size);
             } else {
-                printmessage("%s received from %s(%d):(%u)=>%s\n",mu->name, from, mu->listen_socket_fd,buffer_size,buffer);
+                printmessage("%s received from %s(%d):(%u)=>%s\n",mu->name, distant_ip_addr, mu->listen_socket_fd,buffer_size,buffer);
                 if (mu->external_read_socket)
-                    mu->external_read_socket(mu->listen_socket_fd, from, buffer, buffer_size);
+                    mu->external_read_socket(mu->listen_socket_fd, distant_ip_addr,sizeof(distant_ip_addr),&distant_port, buffer, buffer_size);
                 free(buffer);
             }
         }
@@ -370,15 +373,17 @@ int minstack_udp_boot_client(minstack_udp *mu) {
     struct hostent *server;
     if (!mu)
         return -1;
-
+    pthread_mutex_lock(&mu->mutex);
     mu->listen_socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (mu->listen_socket_fd < 0) {
         printmoreerror("ERROR opening socket");
+    	pthread_mutex_unlock(&mu->mutex);
         return -2;
     }
     server = gethostbyname(mu->address);
     if (server == NULL) {
         fprintf(stderr, "ERROR, no such host\n");
+    	pthread_mutex_unlock(&mu->mutex);
         return -3;
     }
     memset((char *) &serv_addr, 0, sizeof(serv_addr));
@@ -394,9 +399,15 @@ int minstack_udp_boot_client(minstack_udp *mu) {
     if (connect(mu->listen_socket_fd, (const struct sockaddr *) &serv_addr,
             (socklen_t) sizeof(serv_addr)) < 0) {
         printmoreerror("ERROR connecting");
+    	pthread_mutex_unlock(&mu->mutex);
         return -4;
     }
-    mu->pthread_reading_thread_stop = 1;
+    if (pthread_create(&mu->pthread_reading_thread, NULL, minstack_udp_reading_thread, mu)) {
+        printwarning("pthread_create minstack_udp_boot_server error\n");
+        pthread_mutex_unlock(&mu->mutex);
+        return -5;
+    }
+    pthread_mutex_unlock(&mu->mutex);
     return 0;
 }
 
@@ -430,9 +441,9 @@ int minstack_udp_stop(minstack_udp *mu) {
  * \param function is the function call when something is received
  * \return 0 if OK
  */
-int minstack_udp_set_external_read_function(minstack_udp *mu, void(*function)(
-        int cid, const char *from,char *buffer, unsigned int buffer_size_returned)) {
-    if (!mu || mu->type != SERVER)
+int minstack_udp_set_external_read_function(minstack_udp *mu, void(*function)
+    (int cid, char *from,int from_size,int *port, char *buffer,unsigned int buffer_size_returned)) {
+    if (!mu)
         return -1;
     mu->external_read_socket = function;
     return 0;
@@ -449,10 +460,6 @@ int minstack_udp_write_to_server(minstack_udp *mu, char *message, int len_messag
     if (!mu) {
         //printerror("the minstack_udp is NULL\n");
         return -100;
-    }
-    if (mu->type != CLIENT) {
-        printwarning("The minstack is not a server...\n");
-        return -1;
     }
     if (mu->status != STARTED) {
         printwarning("The client is not started yet\n");
@@ -482,7 +489,7 @@ void minstack_udp_printf(minstack_udp *mu, const char *msg, ...) {
         //printerror("the minstack_udp is NULL\n");
         return;
     }
-    if ((mu->type != CLIENT ) || mu->status != STARTED)
+    if (mu->status != STARTED)
     {
         printerror("The minstack UDP has to be a started client to printf\n");
         return;
@@ -574,7 +581,7 @@ char *minstack_udp_default_read(int cid, unsigned int *buffer_size_returned) {
     return buffer;
 }
 
-int minstack_udp_recvfrom_read(int cid, char *from, char **buffer) {
+int minstack_udp_recvfrom_read(int cid, char *from, int from_size, int *port, char **buffer) {
 	int buffer_size_returned=0;
     int retval, finished = 0;
     char read_buffer[DEFAULT_READ_BUFFER_SIZE] = { 0 };
@@ -591,12 +598,20 @@ int minstack_udp_recvfrom_read(int cid, char *from, char **buffer) {
         printerror("You have to give a char tab for from\n");
         return -2;
     }
+    if (from_size <= 0 ) {
+        printerror("You have to specify the size of from\n");
+        return -3;
+    }
+    if (port == NULL) {
+        printerror("You have to give an int pointer for port\n");
+        return -4;
+    }
     *buffer = (char *) calloc(1, buffer_size);
 
     if (!*buffer) {
         printerror("We could not get enough memory to allocate %d octets to read\n",sizeof(read_buffer));
         buffer_size_returned = 0;
-        return -4;
+        return -5;
     }
 
     while (!finished) {
@@ -645,7 +660,7 @@ int minstack_udp_recvfrom_read(int cid, char *from, char **buffer) {
             return -7;
         }
         if(retval > 0){
-        	snprintf(from,16,"%s",get_in_addr_char(&their_addr));
+		get_in_addr_char(&their_addr,from,from_size,port);
         }
     }
     buffer_size_returned = buffer_size;

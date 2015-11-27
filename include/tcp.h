@@ -50,8 +50,8 @@ void minstack_tcp_printf(minstack_tcp *mt,const char *msg, ...);
 #define minstack_tcp_printf_level3(fd , fmt, arg...)  minstack_tcp_printf(fd,"[3]"fmt, ## arg)
 #define minstack_tcp_printf_level4(fd , fmt, arg...)  minstack_tcp_printf(fd,"[4]"fmt, ## arg)
 #define minstack_tcp_printf_level5(fd , fmt, arg...)  minstack_tcp_printf(fd,"[5]"fmt, ## arg)
-int minstack_tcp_set_external_read_function(minstack_tcp *mt,void (*function)(int cid, const char *from,char *buffer,unsigned int buffer_size_returned));
-minstack_tcp *minstack_tcp_start_a_server_with_read_function(const char *nickname, int port, int max_client_number,void (*function)(int cid, const char *from,char *buffer,unsigned int buffer_size_returned));
+int minstack_tcp_set_external_read_function(minstack_tcp *mt, void(*function)(int cid, char *from,int from_size, int *port, char *buffer, unsigned int buffer_size_returned));
+minstack_tcp *minstack_tcp_start_a_server_with_read_function(const char *nickname, int port, int max_client_number,void (*function)(int cid, char *from,int from_size, int *port, char *buffer, unsigned int buffer_size_returned));
 
 #ifdef __cplusplus
 }

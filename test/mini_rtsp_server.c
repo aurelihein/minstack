@@ -36,7 +36,7 @@ enum all_status_rtsp_server rtsp_server_status;
 
 void usage(const char *appli);
 void stop(int exit_status);
-void rtsp_listenner(int cid,const char *from, char *buffer,unsigned int buffer_size_returned);
+void rtsp_listenner(int cid,char *from,int from_size, int *port, char *buffer,unsigned int buffer_size_returned);
 void send_status(int fd,int status_code, const char *version, int cseq_read);
 
 int main (int argc, char **argv){
@@ -80,7 +80,7 @@ void stop(int exit_status)
 	run = 0;
 }
 
-void rtsp_listenner(int cid,const char *from, char *buffer,unsigned int buffer_size_returned)
+void rtsp_listenner(int cid,char *from,int from_size, int *port, char *buffer,unsigned int buffer_size_returned)
 {
     char method[14];
     char version[9];
@@ -106,13 +106,17 @@ void rtsp_listenner(int cid,const char *from, char *buffer,unsigned int buffer_s
     {
         char answer[1024];
         retval = snprintf(answer,sizeof(answer),"%s 200 OK\r\nCSeq: %d\r\nPublic: DESCRIBE, PLAY, TEARDOWN\r\n\r\n",version,cseq_read);
-        write(cid,answer,retval);
+        if(write(cid,answer,retval)<=0){
+            printf("Something wen wrong when writing answer\n");
+        }
     }
     else if(!strcmp("DESCRIBE",method))
     {
         char answer[1024];
         retval = snprintf(answer,sizeof(answer),"%s 200 OK\r\nCSeq: %d\r\nCamera: %d\r\nCodecs: %s\r\n\r\n",version,cseq_read,handle_camera,"H264");
-        write(cid,answer,retval);
+        if(write(cid,answer,retval)<=0){
+            printf("Something wen wrong when writing answer\n");
+        }
     }
     else if(!strcmp("PLAY",method))
     {

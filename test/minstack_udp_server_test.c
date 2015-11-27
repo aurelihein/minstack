@@ -28,7 +28,7 @@ int run = 1;
 
 void usage(const char *appli);
 void stop(int exit_status);
-void listenner(int cid,const char *from, char *buffer,unsigned int buffer_size_returned);
+void listenner(int cid,char *from,int from_size, int *port, char *buffer,unsigned int buffer_size_returned);
 
 int main (int argc, char **argv){
 	minstack_udp *mu_listen;
@@ -48,8 +48,10 @@ int main (int argc, char **argv){
 		printf("We could not initialized the server test...\n");
 		return 0;
 	}
-	while(run)
+	while(run){
 		usleep(1*1000*1000);
+		minstack_udp_printf(mu_listen,"Hello boy");
+	}
 	printf("Stopping %s\n",argv[0]);
 	minstack_udp_uninit(mu_listen);
 	return 0;
@@ -67,9 +69,9 @@ void stop(int exit_status)
 	run = 0;
 }
 
-void listenner(int cid,const char *from, char *buffer,unsigned int buffer_size_returned)
+void listenner(int cid,char *from,int from_size, int *port, char *buffer,unsigned int buffer_size_returned)
 {
 	if(buffer && buffer_size_returned)
-        printf("<%s:%d>%s\n",from,cid,buffer);
+        	printf("<%s[%d]:%d>%s\n",from,*port,cid,buffer);
 }
 

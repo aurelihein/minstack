@@ -29,7 +29,7 @@ char **arguments;
 
 void usage(const char *appli);
 void stop(int exit_status);
-void listenner(int cid,const char *from, char *buffer,unsigned int buffer_size_returned);
+void listenner(int cid,char *from,int from_size, int *port, char *buffer,unsigned int buffer_size_returned);
 
 int main (int argc, char **argv){
 	minstack_udp *mu_listen;
@@ -72,7 +72,7 @@ void stop(int exit_status)
 	run = 0;
 }
 
-void listenner(int cid,const char *from, char *buffer,unsigned int buffer_size_returned)
+void listenner(int cid,char *from,int from_size, int *port, char *buffer,unsigned int buffer_size_returned)
 {
 	if(buffer && buffer_size_returned){
 		minstack_udp *mu_sender;

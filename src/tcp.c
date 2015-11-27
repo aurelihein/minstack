@@ -43,7 +43,7 @@
 int stop_thread_server_socket = 0;
 
 int minstack_tcp_delete_cid(sockets *mt, int cid);
-int minstack_tcp_recvfrom_read(int cid, char *from, char **buffer);
+int minstack_tcp_recvfrom_read(int cid, char *from, int from_size, int *port, char **buffer);
 char *minstack_tcp_default_read(int cid, unsigned int *buffer_size_returned);
 
 int minstack_default_new_connection_callback(int cid,
@@ -136,12 +136,13 @@ void *minstack_tcp_reading_thread(void *ptr) {
         }
         pthread_mutex_unlock(&mt->mutex);
         if (socket_to_read > 0) {
-        	char from[16];
+            char distant_ip_addr[16]={0};
+            int distant_port=0;
             char *buffer=NULL;
             int buffer_size = 0;
             pthread_mutex_lock(&mt->mutex);
             pthread_mutex_unlock(&mt->mutex);
-            buffer_size = mt->read_socket(socket_to_read, from,&buffer);
+            buffer_size = mt->read_socket(socket_to_read, distant_ip_addr, sizeof(distant_ip_addr), &distant_port,&buffer);
 
             if (buffer_size <= 0) {
                 pthread_mutex_lock(&mt->mutex);
@@ -158,9 +159,9 @@ void *minstack_tcp_reading_thread(void *ptr) {
                     minstack_tcp_stop(mt);
                 }
             } else {
-                printmessage("%s received from %s(%d):(%u)=>%s\n",mt->name,from, socket_to_read,buffer_size,buffer);
+                printmessage("%s received from %s(%d):(%u)=>%s\n",mt->name,distant_ip_addr, socket_to_read,buffer_size,buffer);
                 if (mt->external_read_socket)
-                    mt->external_read_socket(socket_to_read, from, buffer, buffer_size);
+                    mt->external_read_socket(socket_to_read, distant_ip_addr, sizeof(distant_ip_addr), &distant_port, buffer, buffer_size);
                 //else
                 free(buffer);
             }
@@ -489,10 +490,6 @@ int minstack_tcp_write_to_server(minstack_tcp *mt, char *message, int len_messag
         //printerror("the minstack_tcp is NULL\n");
         return -100;
     }
-    if (mt->type != CLIENT) {
-        printwarning("The minstack is not a server...\n");
-        return -1;
-    }
     if (mt->status != STARTED) {
         printwarning("The client is not started yet\n");
         return -1;
@@ -667,7 +664,7 @@ unsigned int minstack_tcp_get_receive_loop_usleep(minstack_tcp *mt) {
  * \return 0 if OK
  */
 int minstack_tcp_set_external_read_function(minstack_tcp *mt, void(*function)(
-        int cid, const char *from, char *buffer, unsigned int buffer_size_returned)) {
+        int cid, char *from,int from_size, int *port, char *buffer, unsigned int buffer_size_returned)) {
     if (!mt || mt->type == NONE)
         return -1;
     mt->external_read_socket = function;
@@ -746,7 +743,7 @@ minstack_tcp *minstack_tcp_start_a_server(const char *nickname, int port,
  */
 minstack_tcp *minstack_tcp_start_a_server_with_read_function(
         const char *nickname, int port, int max_client_number, void(*function)(
-                int cid, const char *from, char *buffer, unsigned int buffer_size_returned)) {
+                int cid, char *from, int from_size, int *port, char *buffer, unsigned int buffer_size_returned)) {
     int retval;
     minstack_tcp *mt = minstack_tcp_init(nickname);
     if (mt == NULL)
@@ -769,7 +766,7 @@ minstack_tcp *minstack_tcp_start_a_server_with_read_function(
     return mt;
 }
 
-int minstack_tcp_recvfrom_read(int cid, char *from, char **buffer) {
+int minstack_tcp_recvfrom_read(int cid, char *from, int from_size, int *port, char **buffer) {
 	int buffer_size_returned=0;
     int retval, finished = 0;
     char read_buffer[DEFAULT_READ_BUFFER_SIZE] = { 0 };
@@ -841,7 +838,7 @@ int minstack_tcp_recvfrom_read(int cid, char *from, char **buffer) {
             return buffer_size_returned;
         }
         if(retval > 0){
-        	snprintf(from,16,"%s",get_in_addr_char(&their_addr));
+        	get_in_addr_char(&their_addr,from,from_size,port);
         	printdebug("Get datas from %s\n",from);
         }
     }

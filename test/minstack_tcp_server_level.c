@@ -28,7 +28,7 @@ int run = 1;
 
 void usage(const char *appli);
 void stop(int exit_status);
-void listenner(int cid,const char *from, char *buffer,unsigned int buffer_size_returned);
+void listenner(int cid,char *from,int from_size, int *port, char *buffer,unsigned int buffer_size_returned);
 
 int level = 0;
 
@@ -70,13 +70,13 @@ void stop(int exit_status)
 	run = 0;
 }
 
-void listenner(int cid,const char *from, char *buffer,unsigned int buffer_size_returned)
+void listenner(int cid,char *from,int from_size, int *port, char *buffer,unsigned int buffer_size_returned)
 {
     int level_read;
 	if(buffer && buffer_size_returned)
 	{
 	    if(sscanf(buffer,"[%d]",&level_read) && (level_read >= level))
-	        printf("%s:%s\n",from,buffer);
+	        printf("%s[%d]:%s\n",from,*port,buffer);
 	}
 }
 
