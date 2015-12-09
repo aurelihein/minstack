@@ -309,7 +309,8 @@ void *minstack_udp_reading_thread(void *ptr) {
                 printmessage("%s received from %s(%d):(%u)=>%s\n",mu->name, distant_ip_addr, mu->listen_socket_fd,buffer_size,buffer);
                 if (mu->external_read_socket && buffer)
                     mu->external_read_socket(mu->listen_socket_fd, distant_ip_addr,sizeof(distant_ip_addr),&distant_port, buffer, buffer_size);
-		if(buffer) free(buffer);
+		/* We will now ask to client to free the buffer */
+		//if(buffer) free(buffer);
             }
         }
     }
